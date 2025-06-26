@@ -31,6 +31,15 @@ class AIModel(ABC):
         """
         pass
 
+    def generate_documentation(self, prompt: str) -> str:
+        """Generates documentation based on a prompt."""
+        pass
+
+    @abstractmethod
+    def generate_diagram(self, code: str) -> str:
+        """Generates a diagram from code."""
+        pass
+
 
 class MMaDAModel(AIModel):
     """
@@ -100,3 +109,17 @@ class MMaDAModel(AIModel):
             "diagram": diagram,
             "suggestions": "Placeholder: Suggestions for improvement.",
         }
+
+    def generate_documentation(self, prompt: str) -> str:
+        """Generates documentation based on a prompt."""
+        # For now, we return a placeholder.
+        # A real implementation would use a more sophisticated analysis.
+        return f"Documentation for prompt: {prompt[:50]}..."
+
+    def generate_diagram(self, code: str) -> str:
+        """
+        Generates a Mermaid.js diagram from code.
+        """
+        # Placeholder for diagram generation logic
+        # A real implementation would analyze the code and generate a diagram
+        return "graph TD;\\nA-->B;"

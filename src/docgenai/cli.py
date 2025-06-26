@@ -24,14 +24,27 @@ def cli():
     type=click.Path(exists=True, path_type=Path),
     help="Path to the configuration file.",
 )
-def generate(path: Path, config_path: Path):
+@click.option(
+    "--diagram",
+    is_flag=True,
+    help="Generate a diagram instead of documentation.",
+)
+def generate(path: Path, config_path: Path, diagram: bool):
     """
     Generates documentation for a given file or directory.
     """
     try:
         processor = CoreProcessor(config_path=config_path)
-        result = processor.process(path)
-        click.echo(result)
+        if diagram:
+            if not path.is_file():
+                click.echo("Diagram generation is only supported for single files.")
+                return
+            result = processor.process_file(path, generate_diagram=True)
+            click.echo(f"Diagram generated: {result}")
+        else:
+            results = processor.process(path)
+            for result in results:
+                click.echo(f"Documentation generated: {result}")
     except (FileNotFoundError, ValueError) as e:
         click.echo(f"Error: {e}", err=True)
 

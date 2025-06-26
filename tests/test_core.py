@@ -110,25 +110,19 @@ class TestCoreProcessor(unittest.TestCase):
 
     @patch("pathlib.Path.write_text")
     @patch("pathlib.Path.mkdir")
-    def test_process_image(self, mock_mkdir, mock_write_text):
-        """Test the orchestration within process_image."""
-        self.mock_template_loader.load_documentation.return_value = "doc template"
-        self.mock_template_loader.load_style_guide.return_value = "style guide"
-        self.mock_model.analyze_image.return_value = "image analysis"
-        self.mock_model.generate_documentation.return_value = "generated doc"
+    @patch("pathlib.Path.read_text", return_value="code")
+    def test_process_for_diagram(self, mock_read_text, mock_mkdir, mock_write_text):
+        """Test the orchestration within process_for_diagram."""
+        self.mock_model.generate_diagram.return_value = "diagram"
 
-        image_path = Path("source/test.png")
-        self.processor.ai_model.analyze_image = MagicMock(return_value="image analysis")
+        file_path = Path("source/test.py")
+        result = self.processor.process_for_diagram(file_path)
 
-        result = self.processor.process_image(image_path)
-
-        self.assertEqual(result, "test_output/test_doc.md")
-        self.processor.ai_model.analyze_image.assert_called_once_with(image_path)
-        self.mock_template_loader.load_documentation.assert_called_once()
-        self.mock_template_loader.load_style_guide.assert_called_once()
-        self.mock_model.generate_documentation.assert_called_once()
+        self.assertEqual(result, "test_output/test_diagram.md")
+        mock_read_text.assert_called_once()
+        self.mock_model.generate_diagram.assert_called_once_with("code")
         mock_mkdir.assert_called_once_with(parents=True, exist_ok=True)
-        mock_write_text.assert_called_once_with("generated doc")
+        mock_write_text.assert_called_once_with("```mermaid\ndiagram\n```")
 
 
 if __name__ == "__main__":

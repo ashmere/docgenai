@@ -36,10 +36,13 @@ class CoreProcessor:
         else:
             return [self.process_file(path)]
 
-    def process_file(self, file_path: Path) -> str:
+    def process_file(self, file_path: Path, generate_diagram: bool = False) -> str:
         """
-        Processes a single source code file to generate documentation.
+        Processes a single source code file to generate documentation or a diagram.
         """
+        if generate_diagram:
+            return self.process_for_diagram(file_path)
+
         # 1. Read the source code
         code = file_path.read_text()
 
@@ -63,6 +66,23 @@ class CoreProcessor:
         output_path = self.config.output.dir / f"{file_path.stem}_doc.md"
         output_path.parent.mkdir(parents=True, exist_ok=True)
         output_path.write_text(generated_doc)
+
+        return str(output_path)
+
+    def process_for_diagram(self, file_path: Path) -> str:
+        """
+        Processes a single source code file to generate a diagram.
+        """
+        # 1. Read the source code
+        code = file_path.read_text()
+
+        # 2. Generate the diagram
+        diagram = self.ai_model.generate_diagram(code)
+
+        # 3. Save the diagram
+        output_path = self.config.output.dir / f"{file_path.stem}_diagram.md"
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        output_path.write_text(f"```mermaid\n{diagram}\n```")
 
         return str(output_path)
 
