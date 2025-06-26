@@ -1,4 +1,8 @@
+from pathlib import Path
+
 import click
+
+from .core import CoreProcessor
 
 
 @click.group()
@@ -10,13 +14,26 @@ def cli():
 
 
 @cli.command()
-@click.argument("path", type=click.Path(exists=True))
-def generate(path: str):
+@click.argument(
+    "path",
+    type=click.Path(exists=True, path_type=Path),
+)
+@click.option(
+    "--config",
+    "config_path",
+    type=click.Path(exists=True, path_type=Path),
+    help="Path to the configuration file.",
+)
+def generate(path: Path, config_path: Path):
     """
-    Generate new documentation for a file or directory.
+    Generates documentation for a given file or directory.
     """
-    click.echo(f"Generating docs for {path}...")
-    # Core logic will be called here
+    try:
+        processor = CoreProcessor(config_path=config_path)
+        result = processor.process(path)
+        click.echo(result)
+    except (FileNotFoundError, ValueError) as e:
+        click.echo(f"Error: {e}", err=True)
 
 
 @cli.command()

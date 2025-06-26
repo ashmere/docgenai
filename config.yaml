@@ -3,7 +3,8 @@
 # AI model settings
 model:
   # The name of the Hugging Face model to use.
-  name: "Gen-Verse/MMaDA-8B-Base"
+  name: "MMaDA"
+  hugging_face_token: "YOUR_HUGGING_FACE_TOKEN_HERE"
 
 # Output settings
 output:
