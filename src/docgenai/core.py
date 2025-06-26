@@ -3,6 +3,8 @@
 
 from pathlib import Path
 
+import click
+
 from .config import AppConfig, load_config
 from .models import AIModel, MMaDAModel
 from .templates import TemplateLoader
@@ -24,19 +26,29 @@ class CoreProcessor:
         else:
             raise ValueError(f"Unsupported model: {model_config.name}")
 
+    def process(self, path: Path) -> list[str]:
+        """
+        Processes a file or directory to generate documentation.
+        Returns a list of paths to the generated documentation files.
+        """
+        if path.is_dir():
+            return self.process_directory(path)
+        else:
+            return [self.process_file(path)]
+
     def process_file(self, file_path: Path) -> str:
         """
         Processes a single source code file to generate documentation.
         """
-        # 1. Read file content
+        # 1. Read the source code
         code = file_path.read_text()
 
-        # 2. Analyze with AI model (placeholder)
-        analysis_result = self.ai_model.analyze_code(code)
-
-        # 3. Load templates
-        doc_template = self.template_loader.load_doc_template()
+        # 2. Load templates
+        doc_template = self.template_loader.load_documentation()
         style_guide = self.template_loader.load_style_guide()
+
+        # 3. Analyze the code
+        analysis_result = self.ai_model.analyze_code(code)
 
         # 4. Generate documentation content (placeholder)
         # In the future, this will use a more sophisticated prompt
@@ -48,26 +60,50 @@ class CoreProcessor:
         )
         generated_doc = self.ai_model.generate_documentation(prompt)
 
-        return generated_doc
+        output_path = self.config.output.dir / f"{file_path.stem}_doc.md"
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        output_path.write_text(generated_doc)
 
-    def process_directory(self, dir_path: Path) -> str:
-        """
-        Processes a directory of source code files and generates a combined
-        documentation.
-        """
-        # Placeholder for directory processing logic
-        # For now, let's just indicate it's a directory.
-        # A real implementation would iterate files, call process_file,
-        # and aggregate the results.
-        return f"Documentation for directory: {dir_path.name}"
+        return str(output_path)
 
-    def process(self, path: Path) -> str:
+    def process_directory(self, dir_path: Path) -> list[str]:
         """
-        Processes a given path, dispatching to file or directory processing.
+        Processes all supported files in a directory recursively.
         """
-        if path.is_file():
-            return self.process_file(path)
-        elif path.is_dir():
-            return self.process_directory(path)
-        else:
-            raise FileNotFoundError(f"Path does not exist: {path}")
+        generated_files = []
+        supported_extensions = [".py", ".png", ".jpg", ".jpeg"]
+        for file_path in dir_path.rglob("*"):
+            if file_path.suffix in supported_extensions:
+                click.echo(f"Processing {file_path}...")
+                if file_path.suffix == ".py":
+                    generated_file = self.process_file(file_path)
+                else:
+                    generated_file = self.process_image(file_path)
+                generated_files.append(generated_file)
+        return generated_files
+
+    def process_image(self, image_path: Path) -> str:
+        """
+        Processes an image file to generate documentation.
+        """
+        # 1. Analyze the image
+        analysis_result = self.ai_model.analyze_image(image_path)
+
+        # 2. Load templates
+        doc_template = self.template_loader.load_documentation()
+        style_guide = self.template_loader.load_style_guide()
+
+        # 3. Generate documentation content
+        prompt = (
+            f"{doc_template}\\n\\n"
+            f"Style Guide:\\n{style_guide}\\n\\n"
+            f"Image Analysis:\\n{analysis_result}"
+        )
+        generated_doc = self.ai_model.generate_documentation(prompt)
+
+        # 4. Save the documentation
+        output_path = self.config.output.dir / f"{image_path.stem}_doc.md"
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        output_path.write_text(generated_doc)
+
+        return str(output_path)

@@ -2,6 +2,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
+from docgenai.config import AppConfig, ModelConfig, OutputConfig
 from docgenai.core import CoreProcessor
 
 
@@ -11,65 +12,123 @@ class TestCoreProcessor(unittest.TestCase):
     @patch("docgenai.core.TemplateLoader")
     def setUp(self, mock_template_loader, mock_mmada_model, mock_load_config):
         """Set up a CoreProcessor instance with mocked dependencies."""
-        self.mock_config = MagicMock()
+        self.mock_config = AppConfig(
+            model=ModelConfig(name="mmada", hugging_face_token="fake-token"),
+            output=OutputConfig(dir=Path("test_output")),
+        )
         mock_load_config.return_value = self.mock_config
-        self.mock_config.model.name = "mmada"
 
         self.mock_model = MagicMock()
         mock_mmada_model.return_value = self.mock_model
 
-        self.mock_templates = MagicMock()
-        mock_template_loader.return_value = self.mock_templates
+        self.mock_template_loader = MagicMock()
+        mock_template_loader.return_value = self.mock_template_loader
 
         self.processor = CoreProcessor()
 
-    def test_init(self):
-        """Test that the processor initializes its components correctly."""
-        self.assertIsNotNone(self.processor.config)
-        self.assertIsNotNone(self.processor.ai_model)
-        self.assertIsNotNone(self.processor.template_loader)
-        self.assertEqual(self.processor.ai_model, self.mock_model)
+    def test_process_delegates_to_process_file(self):
+        """Test that process() delegates to process_file() for files."""
+        file_path = MagicMock(spec=Path)
+        file_path.is_dir.return_value = False
+        file_path.is_file.return_value = True
 
-    @patch("pathlib.Path.is_file", return_value=True)
-    def test_process_dispatches_to_file(self, mock_is_file):
-        """Test that process() calls process_file() for a file path."""
-        with patch.object(self.processor, "process_file") as mock_process_file:
-            test_path = Path("fake/file.py")
-            self.processor.process(test_path)
-            mock_process_file.assert_called_once_with(test_path)
+        self.processor.process_file = MagicMock()
+        self.processor.process_directory = MagicMock()
 
-    @patch("pathlib.Path.is_file", return_value=False)
-    @patch("pathlib.Path.is_dir", return_value=True)
-    def test_process_dispatches_to_directory(self, mock_is_dir, mock_is_file):
-        """Test that process() calls process_directory() for a directory."""
-        with patch.object(self.processor, "process_directory") as mock_process_dir:
-            test_path = Path("fake/dir")
-            self.processor.process(test_path)
-            mock_process_dir.assert_called_once_with(test_path)
+        self.processor.process(file_path)
 
-    @patch("pathlib.Path.is_file", return_value=False)
-    @patch("pathlib.Path.is_dir", return_value=False)
-    def test_process_raises_for_invalid_path(self, mock_is_dir, mock_is_file):
-        """Test that process() raises FileNotFoundError for a bad path."""
-        with self.assertRaises(FileNotFoundError):
-            self.processor.process(Path("non/existent/path"))
+        self.processor.process_file.assert_called_once_with(file_path)
+        self.processor.process_directory.assert_not_called()
+
+    def test_process_delegates_to_process_directory(self):
+        """Test that process() delegates to process_directory() for directories."""
+        dir_path = MagicMock(spec=Path)
+        dir_path.is_dir.return_value = True
+        dir_path.is_file.return_value = False
+
+        self.processor.process_file = MagicMock()
+        self.processor.process_directory = MagicMock()
+
+        self.processor.process(dir_path)
+
+        self.processor.process_directory.assert_called_once_with(dir_path)
+        self.processor.process_file.assert_not_called()
 
     @patch("pathlib.Path.read_text", return_value="some code")
-    def test_process_file_orchestration(self, mock_read_text):
+    @patch("pathlib.Path.write_text")
+    @patch("pathlib.Path.mkdir")
+    def test_process_file(self, mock_mkdir, mock_write_text, mock_read_text):
         """Test the orchestration within process_file."""
+        self.mock_template_loader.load_documentation.return_value = "doc template"
+        self.mock_template_loader.load_style_guide.return_value = "style guide"
         self.mock_model.analyze_code.return_value = "analysis"
-        self.mock_model.generate_documentation.return_value = "doc"
-        self.mock_templates.load_doc_template.return_value = "doc temp"
-        self.mock_templates.load_style_guide.return_value = "style"
+        self.mock_model.generate_documentation.return_value = "generated doc"
 
-        result = self.processor.process_file(Path("fake/file.py"))
+        file_path = Path("source/test.py")
+        result = self.processor.process_file(file_path)
 
-        self.assertEqual(result, "doc")
+        self.assertEqual(result, "test_output/test_doc.md")
         mock_read_text.assert_called_once()
         self.mock_model.analyze_code.assert_called_once_with("some code")
-        self.mock_templates.load_doc_template.assert_called_once()
-        self.mock_templates.load_style_guide.assert_called_once()
+        self.mock_template_loader.load_documentation.assert_called_once()
+        self.mock_template_loader.load_style_guide.assert_called_once()
         self.mock_model.generate_documentation.assert_called_once()
+        mock_mkdir.assert_called_once_with(parents=True, exist_ok=True)
+        mock_write_text.assert_called_once_with("generated doc")
+
+    @patch("docgenai.core.click.echo")
+    @patch("pathlib.Path.rglob")
+    def test_process_directory(self, mock_rglob, mock_echo):
+        """Test that process_directory() processes all .py files found."""
+        mock_dir_path = Path("fake_dir")
+        mock_files = [Path("test1.py"), Path("test2.py")]
+        mock_rglob.return_value = mock_files
+
+        self.processor.process_file = MagicMock(return_value="processed")
+
+        result = self.processor.process_directory(mock_dir_path)
+
+        self.assertEqual(self.processor.process_file.call_count, 2)
+        self.processor.process_file.assert_any_call(mock_files[0])
+        self.processor.process_file.assert_any_call(mock_files[1])
+        self.assertEqual(result, ["processed", "processed"])
+
+    @patch("docgenai.core.click.echo")
+    @patch("pathlib.Path.rglob")
+    def test_process_directory_with_images(self, mock_rglob, mock_echo):
+        """Test that process_directory() processes image files correctly."""
+        mock_dir_path = Path("fake_dir")
+        mock_files = [Path("test.png")]
+        mock_rglob.return_value = mock_files
+
+        self.processor.process_image = MagicMock(return_value="processed_image")
+
+        result = self.processor.process_directory(mock_dir_path)
+
+        self.processor.process_image.assert_called_once_with(mock_files[0])
+        self.assertEqual(result, ["processed_image"])
+
+    @patch("pathlib.Path.write_text")
+    @patch("pathlib.Path.mkdir")
+    def test_process_image(self, mock_mkdir, mock_write_text):
+        """Test the orchestration within process_image."""
+        self.mock_template_loader.load_documentation.return_value = "doc template"
+        self.mock_template_loader.load_style_guide.return_value = "style guide"
+        self.mock_model.analyze_image.return_value = "image analysis"
+        self.mock_model.generate_documentation.return_value = "generated doc"
+
+        image_path = Path("source/test.png")
+        self.processor.ai_model.analyze_image = MagicMock(return_value="image analysis")
+
+        result = self.processor.process_image(image_path)
+
+        self.assertEqual(result, "test_output/test_doc.md")
+        self.processor.ai_model.analyze_image.assert_called_once_with(image_path)
+        self.mock_template_loader.load_documentation.assert_called_once()
+        self.mock_template_loader.load_style_guide.assert_called_once()
+        self.mock_model.generate_documentation.assert_called_once()
+        mock_mkdir.assert_called_once_with(parents=True, exist_ok=True)
+        mock_write_text.assert_called_once_with("generated doc")
 
 
 if __name__ == "__main__":
