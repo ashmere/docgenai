@@ -1,0 +1,19 @@
+{
+    "ignorePatterns": [
+      {
+        "pattern": "^.*localhost.*"
+      },
+      {
+        "pattern": "^.*localtest.me.*"
+      },
+      {
+        "pattern": "^.*127.0.0.1.*"
+      },
+      {
+        "pattern": "^/images/"
+      },
+      {
+        "pattern": "^https://medium.com"
+      }
+    ]
+  }

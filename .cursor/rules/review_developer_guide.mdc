@@ -1,0 +1,275 @@
+---
+description: Automatically locate and analyze MCP project developer documentation before making any code changes
+globs:
+alwaysApply: true
+---
+
+# Review Developer Guide Before Changes
+
+## AI Assistant Instructions
+
+Before making ANY changes to a project, automatically locate, read, and analyze the developer documentation. Use this information to inform all code suggestions and modifications.
+
+## Automatic Documentation Discovery
+
+### 1. Search for Developer Documentation
+**Execute these commands to find documentation:**
+```bash
+# Primary locations
+find . -name "developer.md" -o -name "DEVELOPER.md" 2>/dev/null
+find . -name "development.md" -o -name "DEVELOPMENT.md" 2>/dev/null
+
+# Secondary locations
+find . -path "*/docs/*" -name "*.md" | grep -i "dev\|contrib\|guide" 2>/dev/null
+ls -la README.md CONTRIBUTING.md docs/ 2>/dev/null
+
+# Check for inline documentation
+grep -r "## Development\|## Developer\|## Contributing" *.md docs/ 2>/dev/null
+```
+
+### 2. Documentation Priority Order
+**Read documentation in this order:**
+1. `docs/developer.md` or `DEVELOPER.md` (highest priority)
+2. `docs/development.md` or `DEVELOPMENT.md`
+3. `CONTRIBUTING.md` (development sections)
+4. `README.md` (developer/setup sections)
+5. Architecture documentation (`docs/architecture.md`, `ADR.md`)
+6. API documentation (`docs/api.md`, `tools.md`)
+
+## Automated Analysis Process
+
+### 3. Extract Key Information
+**When reading developer documentation, automatically identify:**
+
+**MCP Protocol Patterns:**
+```bash
+# Look for MCP-specific patterns
+grep -i "tool.*definition\|mcp.*server\|protocol\|schema" docs/*.md
+grep -i "resource.*uri\|prompt.*template" docs/*.md
+```
+
+**Environment Requirements:**
+```bash
+# Extract environment variables
+grep -E "export.*=|ENV.*=|[A-Z_]+=" docs/*.md
+grep -i "database_url\|api_url\|port" docs/*.md
+```
+
+**Testing Patterns:**
+```bash
+# Find testing information
+grep -i "test\|spec\|mock" docs/*.md
+grep -A 5 -B 5 "npm test\|pytest\|go test" docs/*.md
+```
+
+**Configuration Requirements:**
+```bash
+# Identify configuration needs
+grep -i "config\|setup\|install" docs/*.md
+grep -A 10 "## Setup\|## Installation\|## Configuration" docs/*.md
+```
+
+### 4. Pattern Recognition and Validation
+**Automatically validate documentation against code:**
+```bash
+# Verify documented patterns exist in code
+if grep -q "tool.*registration" docs/*.md; then
+  find . -name "*.py" -o -name "*.js" -o -name "*.ts" | xargs grep -l "register.*tool\|tool.*register"
+fi
+
+# Check for documented environment variables in code
+grep -ho '[A-Z_]\+' docs/*.md | while read var; do
+  grep -r "$var" --include="*.py" --include="*.js" --include="*.ts" . || echo "⚠️ $var not found in code"
+done
+```
+
+## MCP-Specific Implementation Rules
+
+### 5. Tool Development Patterns
+**When creating or modifying MCP tools, follow documented patterns:**
+
+**Tool Registration:**
+```typescript
+// Follow project's tool definition pattern
+const tools = [
+  {
+    name: "tool_name",
+    description: "Clear description matching project style",
+    inputSchema: {
+      type: "object",
+      properties: {
+        // Match project's parameter patterns
+      },
+      required: ["param"]
+    }
+  }
+];
+```
+
+**Error Handling:**
+```typescript
+// Use project's error response format
+try {
+  // tool operation
+} catch (error) {
+  return {
+    error: {
+      code: "TOOL_ERROR",
+      message: "Descriptive error message"
+    }
+  };
+}
+```
+
+### 6. Resource Management Patterns
+**Follow documented resource patterns:**
+```typescript
+// URI patterns from documentation
+const resourceUri = `${baseUri}/${resourceType}/${resourceId}`;
+
+// Resource response format
+return {
+  uri: resourceUri,
+  name: resourceName,
+  mimeType: "application/json",
+  text: JSON.stringify(resourceData)
+};
+```
+
+## Automatic Compliance Checking
+
+### 7. Pre-Change Validation
+**Before suggesting any code changes, verify:**
+```bash
+# Check if changes align with documented patterns
+echo "Validating against developer guide..."
+
+# Verify environment variable usage
+if [ -f "docs/developer.md" ]; then
+  documented_vars=$(grep -o '[A-Z_]\+' docs/developer.md)
+  for var in $documented_vars; do
+    if ! grep -r "$var" --include="*.py" .; then
+      echo "⚠️ Environment variable $var not found in code"
+    fi
+  done
+fi
+
+# Check for required dependencies
+if grep -q "requirements.txt\|package.json" docs/*.md; then
+  echo "✓ Dependency documentation found"
+fi
+```
+
+### 8. Integration Pattern Compliance
+**Ensure changes follow documented integration patterns:**
+- Server initialization sequences
+- Client connection handling
+- Message protocol compliance
+- Resource lifecycle management
+- Error propagation strategies
+
+## Automated Suggestions Based on Documentation
+
+### 9. Environment Setup Verification
+**When documentation mentions setup requirements:**
+```bash
+# Auto-generate setup verification
+if grep -q "DATABASE_URL" docs/*.md; then
+  echo "# Verify database connection"
+  echo 'if [ -z "$DATABASE_URL" ]; then echo "❌ DATABASE_URL not set"; fi'
+fi
+
+if grep -q "API_KEY" docs/*.md; then
+  echo "# Verify API key configuration"
+  echo 'if [ -z "$API_KEY" ]; then echo "❌ API_KEY not set"; fi'
+fi
+```
+
+### 10. Testing Strategy Alignment
+**Follow documented testing approaches:**
+```bash
+# Identify testing patterns from docs
+if grep -q "real.*api" docs/*.md; then
+  echo "# Use real API for testing (per documentation)"
+  suggest_real_api_tests=true
+fi
+
+if grep -q "mock.*service" docs/*.md; then
+  echo "# Mock external services (per documentation)"
+  suggest_mock_setup=true
+fi
+```
+
+## Documentation-Driven Code Generation
+
+### 11. Generate Code Following Documented Patterns
+**When creating new code, automatically apply documented patterns:**
+
+**If documentation shows specific error handling:**
+```python
+# Generate error handling following documented pattern
+def handle_tool_error(error):
+    """Handle tool errors according to project documentation."""
+    return {
+        "error": {
+            "code": determine_error_code(error),
+            "message": format_error_message(error),
+            "details": get_error_details(error)
+        }
+    }
+```
+
+**If documentation specifies logging patterns:**
+```python
+# Follow documented logging approach
+import logging
+logger = logging.getLogger(__name__)
+
+def log_tool_execution(tool_name, params):
+    """Log tool execution per documentation standards."""
+    logger.info(f"Executing tool: {tool_name}", extra={"params": params})
+```
+
+## Communication with User
+
+### 12. Report Documentation Analysis
+**Always inform user about documentation findings:**
+```
+📖 Developer Documentation Analysis:
+✅ Found: docs/developer.md (last updated: 2024-01-15)
+✅ Environment requirements: DATABASE_URL, API_PORT, DEBUG_MODE
+✅ Testing strategy: Real API integration preferred
+⚠️ Note: Some examples may be outdated (comparing with code)
+🔍 Key patterns identified: [list relevant patterns]
+```
+
+### 13. Flag Documentation Issues
+**Proactively identify documentation problems:**
+```
+📋 Documentation Issues Found:
+❌ Broken link: docs/api.md references non-existent endpoint
+⚠️ Version mismatch: Documentation mentions v1.2.0, package.json shows v1.4.0
+📝 Missing: No examples for new tool type found in code
+🔄 Outdated: Configuration example uses deprecated environment variable
+```
+
+## Continuous Documentation Validation
+
+### 14. During Development
+**Continuously validate against documentation:**
+- Check that new code follows documented patterns
+- Verify environment variables match documentation
+- Ensure error handling follows documented approaches
+- Validate that API changes are reflected in docs
+
+### 15. Suggest Documentation Updates
+**When code changes require documentation updates:**
+```
+📝 Documentation Updates Needed:
+- Add example for new tool type in docs/tools.md
+- Update environment variable list in docs/developer.md
+- Add troubleshooting section for new error conditions
+- Update API documentation with new endpoints
+```
+
+This rule ensures thorough understanding of MCP project requirements and patterns before making any code changes, reducing bugs and maintaining consistency with project standards.

@@ -1,0 +1,293 @@
+---
+description:
+globs:
+alwaysApply: true
+---
+# Codebase Understanding and Documentation Analysis
+
+## Rule Description
+
+Use available documentation and markdown files to understand the codebase architecture, patterns, and conventions while maintaining awareness that documentation may be outdated. Establish systematic approaches to validate documentation accuracy and fill knowledge gaps through code analysis and team consultation.
+
+## Why This Rule Exists
+
+Effective codebase understanding is crucial for:
+* **Informed decisions**: Make changes that align with existing architecture and patterns
+* **Consistency**: Follow established conventions and coding standards
+* **Risk mitigation**: Avoid breaking existing functionality or violating design principles
+* **Efficiency**: Leverage existing solutions and avoid reinventing functionality
+* **Knowledge transfer**: Build understanding that can be shared with team members
+
+## Documentation-First Approach
+
+### Initial Documentation Review
+
+When approaching a new codebase or unfamiliar area:
+
+1. **Start with documentation** but maintain healthy skepticism:
+   - Read README files, architecture docs, and API documentation
+   - Review setup and installation guides
+   - Study code comments and inline documentation
+   - Examine test files for usage examples
+
+2. **Identify documentation types** and their likely accuracy:
+   - **High accuracy**: Recently updated API docs, generated documentation
+   - **Medium accuracy**: Architecture overviews, design documents
+   - **Variable accuracy**: Setup guides, process documentation, tutorials
+
+3. **Note documentation dates** and freshness indicators:
+   - Last modified dates
+   - Version numbers or tags
+   - References to current vs deprecated features
+   - Inconsistencies with current codebase structure
+
+### Validation Strategy
+
+For each piece of documentation encountered:
+
+1. **Cross-reference with code**:
+   ```bash
+   # Example: Verify API endpoints match documentation
+   grep -r "route\|endpoint" src/ | compare with docs/api.md
+
+   # Check if documented functions exist
+   grep -r "function_name" src/
+   ```
+
+2. **Test documented procedures**:
+   - Try setup instructions on clean environment
+   - Execute code examples from documentation
+   - Verify configuration examples work as described
+
+3. **Look for contradiction indicators**:
+   - File paths that don't exist
+   - Function signatures that don't match
+   - Configuration options not found in code
+   - Dependencies not in package files
+
+## Systematic Codebase Analysis
+
+### When Documentation is Insufficient
+
+If documentation is missing, outdated, or unclear:
+
+1. **Code structure analysis**:
+   ```bash
+   # Understand project structure
+   tree -I 'node_modules|vendor|.git' -L 3
+
+   # Find main entry points
+   find . -name "main.*" -o -name "index.*" -o -name "app.*"
+
+   # Identify configuration files
+   find . -name "*.config.*" -o -name ".*rc" -o -name "*.env*"
+   ```
+
+2. **Pattern recognition**:
+   - Identify naming conventions from existing files
+   - Analyze directory structure for organizational patterns
+   - Study import/require statements for dependency patterns
+   - Review test files for expected behaviors
+
+3. **Historical analysis**:
+   ```bash
+   # Recent changes for context
+   git log --oneline -10
+
+   # Find frequently modified files
+   git log --pretty=format: --name-only | sort | uniq -c | sort -rg | head -10
+
+   # Check for recent architectural changes
+   git log --grep="refactor\|architecture\|structure" --oneline
+   ```
+
+### Architecture Discovery
+
+1. **Component identification**:
+   - Map major modules and their responsibilities
+   - Identify data flow and communication patterns
+   - Understand dependency relationships
+   - Locate configuration and environment handling
+
+2. **Technology stack analysis**:
+   - Package managers and dependency files
+   - Build tools and compilation processes
+   - Testing frameworks and strategies
+   - Deployment and infrastructure tools
+
+3. **Integration points**:
+   - External API connections
+   - Database interactions
+   - File system operations
+   - Network communications
+
+## Documentation Quality Assessment
+
+### Red Flags for Outdated Documentation
+
+Watch for these indicators:
+- **Broken links** to external resources or internal files
+- **Missing files** referenced in documentation
+- **Version mismatches** between docs and actual dependencies
+- **Deprecated syntax** in code examples
+- **Inconsistent terminology** across different documentation sections
+
+### Confidence Levels
+
+Assign confidence levels to different documentation sources:
+
+**High Confidence (90%+)**:
+- Auto-generated API documentation
+- Recently updated README files
+- Documentation with validation tests
+- Comments in recently modified code
+
+**Medium Confidence (60-90%)**:
+- Architecture documents with recent review dates
+- Setup guides that have been recently tested
+- Documentation with clear ownership
+- Process docs with regular updates
+
+**Low Confidence (30-60%)**:
+- Old tutorial content
+- Setup guides without recent testing
+- Documentation without clear ownership
+- Conflicting information across sources
+
+**Verification Required (<30%)**:
+- Documentation older than 6 months without updates
+- Information contradicted by code analysis
+- Missing or broken examples
+- Documentation for deprecated features
+
+## Communication Strategy
+
+### When Seeking Clarification
+
+When documentation is unclear or potentially outdated:
+
+1. **Document your findings**:
+   ```
+   I've reviewed the documentation in [location] and found potential discrepancies:
+
+   - Documentation states [X], but code shows [Y]
+   - Setup guide references [missing file/outdated command]
+   - API documentation doesn't match current endpoints
+
+   Could you help clarify:
+   1. Which source is authoritative?
+   2. Are there plans to update the documentation?
+   3. Are there other resources I should consult?
+   ```
+
+2. **Propose documentation improvements**:
+   ```
+   Based on my analysis, I can help improve documentation by:
+   - Updating outdated setup instructions
+   - Adding missing API endpoint documentation
+   - Creating validation tests for documented procedures
+   - Establishing documentation review processes
+
+   Would you like me to proceed with any of these improvements?
+   ```
+
+### Knowledge Sharing
+
+When you discover useful information:
+
+1. **Update documentation** where appropriate
+2. **Share findings** with team members
+3. **Create missing documentation** for undocumented areas
+4. **Establish patterns** for future documentation
+
+## Practical Implementation
+
+### Daily Workflow
+
+1. **Before making changes**:
+   - Review relevant documentation sections
+   - Validate critical information through code inspection
+   - Identify potential impacts on documented behavior
+   - Check for breaking changes to documented APIs
+
+2. **During development**:
+   - Note discrepancies between documentation and reality
+   - Update documentation when making changes
+   - Add comments for complex or non-obvious code
+   - Create examples for new functionality
+
+3. **After changes**:
+   - Verify documentation still accurately reflects behavior
+   - Update any affected documentation sections
+   - Add or update tests that validate documented behavior
+   - Communicate changes that affect documented processes
+
+### Tools and Techniques
+
+1. **Documentation validation**:
+   ```bash
+   # Link checking
+   find docs/ -name "*.md" -exec markdown-link-check {} \;
+
+   # Code example testing
+   doctest documentation/examples/
+
+   # API documentation validation
+   swagger-codegen validate api-spec.yaml
+   ```
+
+2. **Code exploration**:
+   ```bash
+   # Find usage patterns
+   grep -r "pattern" --include="*.js" src/
+
+   # Understand data flow
+   grep -r "export\|import" src/ | grep "specific_module"
+
+   # Find configuration usage
+   grep -r "config\|env" src/
+   ```
+
+3. **Historical context**:
+   ```bash
+   # Find when feature was introduced
+   git log -p --follow -- path/to/file
+
+   # Understand decision context
+   git log --grep="why\|because\|reason" --oneline
+   ```
+
+## Best Practices
+
+### Documentation Usage
+
+1. **Start with documentation** but verify critical information
+2. **Use multiple sources** to cross-validate information
+3. **Prioritize recent** and actively maintained documentation
+4. **Test examples** before relying on them
+5. **Document your discoveries** for future reference
+
+### Codebase Exploration
+
+1. **Follow the data** to understand system flow
+2. **Start with tests** to understand expected behavior
+3. **Trace execution paths** for complex operations
+4. **Identify patterns** before making changes
+5. **Understand dependencies** and their implications
+
+### Team Collaboration
+
+1. **Ask questions** when documentation is unclear
+2. **Share knowledge** gained through exploration
+3. **Contribute improvements** to documentation
+4. **Establish conventions** for documentation maintenance
+5. **Create feedback loops** for documentation quality
+
+## Benefits
+
+Systematic codebase understanding provides:
+- **Reduced risk**: Fewer breaking changes and architectural violations
+- **Faster development**: Leverage existing patterns and solutions
+- **Better decisions**: Changes aligned with system design
+- **Knowledge sharing**: Team benefits from documented discoveries
+- **Improved documentation**: Continuous improvement through usage and validation

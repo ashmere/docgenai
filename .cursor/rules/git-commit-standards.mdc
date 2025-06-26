@@ -1,0 +1,205 @@
+---
+description:
+globs:
+alwaysApply: true
+---
+# Git Commit Standards
+
+## Rule Description
+
+Enforce Conventional Commits specification for all Git commit messages to ensure consistent, machine-readable commit history that enables automated tooling for changelog generation, semantic versioning, and project management.
+
+## Why This Rule Exists
+
+Conventional Commits provide:
+* **Automated tooling support**: Enable automatic changelog generation and semantic versioning
+* **Clear communication**: Communicate the nature of changes to teammates and stakeholders
+* **Structured history**: Create an explicit commit history that's easy to navigate and understand
+* **CI/CD integration**: Trigger appropriate build and deployment processes based on commit types
+* **Team collaboration**: Establish consistent patterns that make it easier for contributors to understand project changes
+
+## Conventional Commits Format
+
+All commit messages MUST follow this structure:
+
+```
+<type>[optional scope]: <description>
+
+[optional body]
+
+[optional footer(s)]
+```
+
+### Required Elements
+
+1. **Type**: MUST be one of the following:
+   - `feat`: New feature for the user (correlates with MINOR in semantic versioning)
+   - `fix`: Bug fix for the user (correlates with PATCH in semantic versioning)
+   - `docs`: Documentation only changes
+   - `style`: Changes that do not affect the meaning of the code (white-space, formatting, missing semi-colons, etc)
+   - `refactor`: Code change that neither fixes a bug nor adds a feature
+   - `perf`: Code change that improves performance
+   - `test`: Adding missing tests or correcting existing tests
+   - `build`: Changes that affect the build system or external dependencies
+   - `ci`: Changes to CI configuration files and scripts
+   - `chore`: Other changes that don't modify src or test files
+   - `revert`: Reverts a previous commit
+
+2. **Description**: Short summary of the change (imperative mood, lowercase, no period)
+
+### Optional Elements
+
+3. **Scope**: Noun describing a section of the codebase (e.g., `feat(parser):`, `fix(auth):`)
+4. **Body**: Longer description providing additional context
+5. **Footer**: Issue references, breaking changes, or other metadata
+
+### Breaking Changes
+
+Breaking changes MUST be indicated by:
+- Adding `!` after the type/scope: `feat!:` or `feat(api)!:`
+- Including `BREAKING CHANGE:` in the footer with description
+
+## Examples
+
+### Basic Examples
+```
+feat: add user authentication system
+fix: resolve memory leak in data processing
+docs: update API documentation for v2.0
+style: fix indentation in user service
+refactor: extract validation logic into separate module
+perf: optimize database queries for user lookup
+test: add unit tests for payment processing
+build: update dependencies to latest versions
+ci: add automated security scanning
+chore: update .gitignore for IDE files
+```
+
+### With Scope
+```
+feat(auth): implement OAuth2 integration
+fix(ui): correct button alignment on mobile
+docs(api): add examples for webhook endpoints
+test(payment): add integration tests for Stripe
+```
+
+### With Breaking Changes
+```
+feat!: remove deprecated user endpoints
+
+BREAKING CHANGE: The /api/v1/users endpoint has been removed. Use /api/v2/users instead.
+```
+
+### With Body and Footer
+```
+fix: prevent race condition in user session handling
+
+Add mutex lock to prevent concurrent access to user session data
+which was causing authentication failures under high load.
+
+Fixes #123
+Closes #456
+```
+
+## Validation Rules
+
+When creating commits, ensure:
+
+1. **Type is valid**: Only use approved types from the list above
+2. **Description format**:
+   - Use imperative mood ("add" not "added" or "adds")
+   - Start with lowercase letter
+   - No period at the end
+   - Keep under 72 characters
+3. **Scope format**: If used, enclose in parentheses and use lowercase
+4. **Breaking changes**: Properly indicate with `!` or `BREAKING CHANGE:` footer
+5. **Body format**: Separate from description with blank line, use present tense
+6. **Footer format**: Separate from body with blank line, use proper format for issue references
+
+## Implementation Guidelines
+
+### For Developers
+- Use `git commit -m "type: description"` for simple commits
+- Use `git commit` (without -m) for commits requiring body/footer
+- Consider using tools like `commitizen` for guided commit creation
+- Review commit message before pushing
+
+### For Teams
+- Set up commit message templates in repositories
+- Use pre-commit hooks to validate commit message format
+- Configure CI/CD to reject non-conforming commits
+- Train team members on conventional commit patterns
+
+### Automated Tools Integration
+- Configure semantic-release for automated versioning
+- Set up conventional-changelog for automatic changelog generation
+- Use commit types to trigger appropriate CI/CD pipelines
+- Integrate with project management tools using issue references
+
+## Common Patterns
+
+### Multi-component Changes
+```
+feat(api,ui): add user profile management
+
+Add comprehensive user profile functionality including:
+- New API endpoints for profile CRUD operations
+- Updated UI components for profile editing
+- Validation rules for profile data
+
+Closes #789
+```
+
+### Dependency Updates
+```
+build(deps): upgrade React to v18.2.0
+
+Update React and related packages to latest stable versions.
+Includes breaking changes that required component updates.
+
+BREAKING CHANGE: React 18 changes how effects are handled.
+See migration guide in docs/react-18-migration.md
+```
+
+### Security Fixes
+```
+fix(auth): patch security vulnerability in token validation
+
+Address potential JWT token bypass by strengthening
+signature verification process.
+
+Fixes security issue reported in #999
+```
+
+## Error Prevention
+
+Avoid these common mistakes:
+
+❌ **Wrong**: `Fixed bug in user login`
+✅ **Correct**: `fix(auth): resolve login validation error`
+
+❌ **Wrong**: `feat: Added new feature for users.`
+✅ **Correct**: `feat: add user preference management`
+
+❌ **Wrong**: `Update documentation`
+✅ **Correct**: `docs: update installation guide`
+
+❌ **Wrong**: `fix!: breaking change`
+✅ **Correct**: `fix!: remove deprecated API endpoint`
+
+## Integration with Development Workflow
+
+1. **Pre-commit validation**: Ensure commit messages conform to specification
+2. **Pull request templates**: Include commit message guidelines
+3. **Code review process**: Verify commit message quality during reviews
+4. **Release automation**: Use commit types to determine version bumps
+5. **Documentation updates**: Link commits to relevant documentation changes
+
+## Benefits
+
+Following these standards provides:
+- **Automated versioning**: Semantic version bumps based on commit types
+- **Generated changelogs**: Automatic changelog creation from commit history
+- **Better collaboration**: Clear communication of change intent
+- **Improved debugging**: Easier to track when and why changes were made
+- **Tool integration**: Better integration with development and deployment tools

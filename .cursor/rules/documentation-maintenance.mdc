@@ -1,0 +1,287 @@
+---
+description:
+globs:
+alwaysApply: true
+---
+# Documentation Maintenance and Validation
+
+## Rule Description
+
+Ensure documentation remains accurate, up-to-date, and useful by implementing systematic validation processes, regular reviews, and clear guidelines for when and how to update documentation. Acknowledge that documentation may become outdated and establish processes to detect and address discrepancies.
+
+## Why This Rule Exists
+
+Documentation maintenance is critical because:
+* **Accuracy**: Outdated documentation can mislead developers and cause implementation errors
+* **Efficiency**: Accurate documentation reduces time spent debugging and asking questions
+* **Onboarding**: New team members rely on documentation to understand systems and processes
+* **Knowledge preservation**: Documentation captures institutional knowledge and decisions
+* **User experience**: External users depend on accurate documentation for successful integration
+
+## Documentation Validation Approach
+
+### Acknowledge Documentation Drift
+
+Documentation naturally becomes outdated due to:
+- Code changes without corresponding documentation updates
+- Process evolution that isn't reflected in written procedures
+- New team members who aren't aware of documentation requirements
+- Time pressure that prioritizes code delivery over documentation maintenance
+
+### Detection Strategies
+
+1. **Automated checks** where possible:
+   - Link validation for external references
+   - Code example compilation and testing
+   - API documentation generation from code
+   - Broken reference detection
+
+2. **Manual review processes**:
+   - Regular documentation audits
+   - Code review requirements for documentation updates
+   - User feedback collection and analysis
+   - Periodic accuracy verification
+
+## Implementation Guidelines
+
+### When Documentation May Be Outdated
+
+If you suspect documentation is outdated, follow this process:
+
+1. **Investigate discrepancies**:
+   - Compare documentation with current code implementation
+   - Test documented procedures to verify accuracy
+   - Check recent commit history for undocumented changes
+   - Consult with team members who may have context
+
+2. **Communicate findings**:
+   - Document specific discrepancies found
+   - Estimate impact of outdated information
+   - Identify affected users or use cases
+   - Propose correction timeline
+
+3. **Prompt for updates**:
+   - Ask user if documentation should be updated
+   - Suggest specific corrections needed
+   - Recommend process improvements to prevent future drift
+   - Offer to assist with documentation updates
+
+### Documentation Update Triggers
+
+Update documentation when:
+- **API changes**: Any modification to public interfaces
+- **Process changes**: Updates to development, deployment, or operational procedures
+- **Configuration changes**: New environment variables, config files, or setup requirements
+- **Architecture changes**: Modifications to system design or component interactions
+- **Feature additions**: New functionality that users need to understand
+- **Bug fixes**: When fixes change expected behavior or usage patterns
+
+### Validation Processes
+
+#### Code-Documentation Synchronization
+
+1. **Require documentation updates** in pull requests that:
+   - Add or modify public APIs
+   - Change configuration requirements
+   - Alter deployment procedures
+   - Introduce new features or components
+
+2. **Use automation** to catch discrepancies:
+   ```yaml
+   # Example GitHub Action for documentation validation
+   name: Documentation Validation
+   on: [pull_request]
+   jobs:
+     doc-validation:
+       runs-on: ubuntu-latest
+       steps:
+         - name: Check API docs match code
+           run: |
+             # Generate docs from code
+             npm run generate-docs
+             # Compare with committed docs
+             git diff --exit-code docs/api/
+   ```
+
+3. **Implement review checklists**:
+   - Does this change affect user-facing behavior?
+   - Are configuration examples still accurate?
+   - Do setup instructions need updates?
+   - Are architectural diagrams still correct?
+
+#### Regular Maintenance
+
+1. **Schedule periodic reviews**:
+   - Monthly: Quick scan for obvious outdated information
+   - Quarterly: Comprehensive review of major documentation sections
+   - Annually: Complete documentation audit and restructuring
+
+2. **Assign ownership**:
+   - Designate documentation maintainers for each major section
+   - Rotate responsibility to ensure fresh perspectives
+   - Include documentation maintenance in team member goals
+
+3. **Track documentation health**:
+   - Monitor user questions that could be answered by better documentation
+   - Collect feedback on documentation accuracy and usefulness
+   - Measure time spent answering questions that documentation should address
+
+## User Interaction Guidelines
+
+### When Documentation Appears Outdated
+
+**Proactive communication**:
+```
+I notice this documentation may be outdated based on [specific observation].
+The current documentation shows [X], but the code/process appears to be [Y].
+
+Would you like me to:
+1. Update the documentation to reflect current reality
+2. Investigate further to confirm the discrepancy
+3. Recommend improvements to keep documentation current
+
+This appears to affect [specific users/use cases].
+```
+
+**Offering assistance**:
+```
+I can help update this documentation by:
+- Correcting the specific inaccuracies identified
+- Adding validation steps to prevent future drift
+- Improving the documentation structure for easier maintenance
+- Creating templates for consistent documentation updates
+
+Would you prefer I proceed with these updates or would you like to review the changes first?
+```
+
+### Documentation Update Recommendations
+
+When suggesting documentation updates:
+
+1. **Be specific** about what needs to change
+2. **Explain the impact** of outdated information
+3. **Propose concrete solutions** rather than just identifying problems
+4. **Consider the audience** who will be affected
+5. **Suggest process improvements** to prevent recurrence
+
+## Documentation Types and Maintenance
+
+### API Documentation
+- **Validation**: Automated generation from code annotations
+- **Testing**: Include API examples in automated test suites
+- **Review**: Check during every API change
+- **Format**: OpenAPI/Swagger specifications when possible
+
+### Setup and Installation Guides
+- **Validation**: Regular testing on clean environments
+- **Review**: Verify with each dependency update
+- **Feedback**: Collect user experience reports
+- **Versioning**: Maintain guides for supported versions
+
+### Architecture Documentation
+- **Validation**: Review during system design changes
+- **Updates**: Trigger updates for significant architectural decisions
+- **Diagrams**: Keep visual representations current
+- **Context**: Include decision rationale and trade-offs
+
+### Process Documentation
+- **Validation**: Periodic walk-through of documented procedures
+- **Updates**: Modify when processes evolve
+- **Training**: Use for new team member onboarding
+- **Feedback**: Collect input from process participants
+
+## Quality Metrics
+
+### Documentation Health Indicators
+
+Track these metrics to assess documentation quality:
+- **User questions**: Frequency of questions answered by existing documentation
+- **Update frequency**: How often documentation is modified
+- **Review coverage**: Percentage of documentation reviewed regularly
+- **Accuracy reports**: User-reported discrepancies and resolution time
+
+### Improvement Tracking
+
+Monitor improvements through:
+- **Reduced support tickets**: Fewer questions about documented topics
+- **Faster onboarding**: New team members productive more quickly
+- **User satisfaction**: Feedback on documentation usefulness
+- **Maintenance efficiency**: Time spent keeping documentation current
+
+## Tools and Automation
+
+### Recommended Tools
+
+1. **Documentation generators**:
+   - JSDoc, Sphinx, GitBook for code documentation
+   - Swagger/OpenAPI for API documentation
+   - ADR tools for architecture decisions
+
+2. **Validation tools**:
+   - Link checkers for external references
+   - Spell checkers for content quality
+   - Style guides for consistency
+   - Automated testing for code examples
+
+3. **Collaboration tools**:
+   - Wiki platforms with version control
+   - Review systems integrated with code reviews
+   - Feedback collection mechanisms
+   - Change notification systems
+
+### Integration Examples
+
+```yaml
+# Documentation validation in CI/CD
+documentation-check:
+  runs-on: ubuntu-latest
+  steps:
+    - name: Validate links
+      run: markdown-link-check docs/**/*.md
+
+    - name: Test code examples
+      run: |
+        cd docs/examples
+        npm test
+
+    - name: Check for outdated content
+      run: |
+        # Custom script to check for common outdated patterns
+        ./scripts/check-doc-freshness.sh
+```
+
+## Best Practices
+
+### Writing Maintainable Documentation
+
+1. **Use automation** where possible to reduce manual maintenance
+2. **Include validation steps** in documentation itself
+3. **Write modular content** that can be updated independently
+4. **Use templates** for consistency and completeness
+5. **Include last-updated dates** and review schedules
+
+### Team Processes
+
+1. **Make documentation updates** part of the definition of done
+2. **Include documentation review** in code review processes
+3. **Assign clear ownership** for different documentation sections
+4. **Celebrate documentation improvements** to encourage maintenance
+5. **Provide training** on documentation tools and processes
+
+### User-Centric Approach
+
+1. **Collect user feedback** regularly
+2. **Test documentation** with actual users
+3. **Prioritize high-impact** documentation for maintenance
+4. **Provide multiple formats** for different user needs
+5. **Make feedback easy** to submit and track
+
+## Benefits of Systematic Maintenance
+
+Proper documentation maintenance provides:
+- **Reduced onboarding time**: New team members become productive faster
+- **Fewer support requests**: Users can self-serve with accurate documentation
+- **Better decision making**: Current documentation supports informed choices
+- **Increased confidence**: Teams trust documentation because it's reliable
+- **Knowledge preservation**: Important information doesn't get lost
+- **Improved user experience**: External users have better integration success

@@ -1,0 +1,11 @@
+MD033: false
+MD026: false
+MD013:
+  line_length: 400
+  code_blocks: false
+  tables: false
+  links: false
+MD029: false # ol-prefix gets confused with indented blocks in lists
+MD034: false
+MD041: false # ignore first-line-heading to allow for trail navigation
+MD046: false # allow mixed code blocks due to admonitions requiring indents

@@ -1,0 +1,59 @@
+# Don't forget to also update the first-time.sh script to include new hook types, if applicable.
+# File Format: https://pre-commit.com/#pre-commit-configyaml---hooks
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+        # Any file pattern can be excluded from this hook by adding the following line:
+        exclude: "^forest-fire-pipeline/colors.txt"
+      - id: check-added-large-files
+        args: ['--maxkb=1000']
+      - id: check-executables-have-shebangs
+      - id: check-shebang-scripts-are-executable
+      - id: detect-private-key
+      - id: mixed-line-ending
+      - id: requirements-txt-fixer
+      - id: check-merge-conflict
+      - id: end-of-file-fixer
+      - id: check-json
+      - id: check-toml
+      - id: check-xml
+      - id: check-yaml
+        args: ["--allow-multiple-documents"]
+        exclude: "mkdocs.yaml" # due to use of unsupported Python Tags
+      - id: check-yaml
+        args: ["--allow-multiple-documents", "--unsafe"]
+        files: "mkdocs.yaml" # due to use of unsupported Python Tags
+  - repo: https://github.com/igorshubovych/markdownlint-cli
+    rev: v0.45.0
+    hooks:
+      - id: markdownlint
+        exclude: "docs/research"
+  - repo: https://github.com/tcort/markdown-link-check
+    rev: v3.13.7
+    hooks:
+      - id: markdown-link-check
+        args:
+        - --quiet
+        - --config
+        - .markdown-link-check.json
+        language: node
+        types: [markdown]
+        stages: [pre-commit, pre-push, manual]
+  - repo: https://github.com/commitizen-tools/commitizen
+    rev: v4.8.3
+    hooks:
+      - id: commitizen
+
+  - repo: https://github.com/psf/black
+    rev: 25.1.0
+    hooks:
+      - id: black
+        language_version: python3.12
+
+  - repo: https://github.com/pycqa/isort
+    rev: 6.0.1
+    hooks:
+      - id: isort
+        name: isort (python)

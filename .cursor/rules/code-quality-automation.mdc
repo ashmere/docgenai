@@ -1,0 +1,317 @@
+---
+description:
+globs:
+alwaysApply: true
+---
+# Code Quality Automation
+
+## Rule Description
+
+Establish and maintain automated code quality checks through pre-commit hooks, linting, formatting, and continuous integration to ensure consistent code standards and catch issues before they reach the main branch.
+
+## Why This Rule Exists
+
+Automated code quality provides:
+* **Consistency**: Enforce uniform code style and standards across the team
+* **Early detection**: Catch bugs, security issues, and style violations before code review
+* **Reduced review time**: Automate routine checks so reviewers can focus on logic and architecture
+* **Knowledge sharing**: Codify best practices and make them automatically enforceable
+* **Confidence**: Ensure code meets quality standards before deployment
+
+## Pre-commit Hook Implementation
+
+### Detection and Setup
+
+When working with a repository that has pre-commit configured:
+
+1. **Check for pre-commit configuration**:
+   ```bash
+   # Look for these files in the repository root
+   ls -la .pre-commit-config.yaml .pre-commit-hooks.yaml
+   ```
+
+2. **Install pre-commit if configuration exists**:
+   ```bash
+   # Install pre-commit tool
+   pip install pre-commit
+   # or
+   brew install pre-commit
+   # or
+   npm install -g pre-commit
+
+   # Install the git hook scripts
+   pre-commit install
+   ```
+
+3. **Run pre-commit on all files** (first time setup):
+   ```bash
+   pre-commit run --all-files
+   ```
+
+### Automatic Execution
+
+Once installed, pre-commit hooks will:
+- Run automatically on `git commit`
+- Check only staged files by default
+- Prevent commits if any hook fails
+- Allow manual bypass with `git commit --no-verify` (use sparingly)
+
+### Manual Execution
+
+Run pre-commit hooks manually when needed:
+```bash
+# Run on all files
+pre-commit run --all-files
+
+# Run specific hook
+pre-commit run <hook-id>
+
+# Run on specific files
+pre-commit run --files path/to/file.py
+
+# Update hook versions
+pre-commit autoupdate
+```
+
+## Common Pre-commit Hooks
+
+### Code Formatting
+- **black** (Python): Code formatter
+- **prettier** (JavaScript/TypeScript/CSS/Markdown): Code formatter
+- **gofmt** (Go): Code formatter
+- **rustfmt** (Rust): Code formatter
+
+### Linting
+- **flake8/ruff** (Python): Style and error checking
+- **eslint** (JavaScript/TypeScript): Linting and style checking
+- **pylint** (Python): Comprehensive code analysis
+- **golangci-lint** (Go): Fast Go linters runner
+
+### Security
+- **bandit** (Python): Security issue detection
+- **safety** (Python): Dependency vulnerability scanning
+- **semgrep**: Multi-language security scanning
+- **detect-secrets**: Prevent secrets from being committed
+
+### General Quality
+- **trailing-whitespace**: Remove trailing whitespace
+- **end-of-file-fixer**: Ensure files end with newline
+- **check-yaml**: Validate YAML syntax
+- **check-json**: Validate JSON syntax
+- **check-merge-conflict**: Detect merge conflict markers
+- **check-added-large-files**: Prevent large files from being committed
+
+## Example Pre-commit Configuration
+
+### Python Project
+```yaml
+# .pre-commit-config.yaml
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.4.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-added-large-files
+      - id: check-merge-conflict
+
+  - repo: https://github.com/psf/black
+    rev: 23.1.0
+    hooks:
+      - id: black
+        language_version: python3
+
+  - repo: https://github.com/charliermarsh/ruff-pre-commit
+    rev: v0.0.254
+    hooks:
+      - id: ruff
+        args: [--fix, --exit-non-zero-on-fix]
+
+  - repo: https://github.com/PyCQA/bandit
+    rev: 1.7.4
+    hooks:
+      - id: bandit
+        args: [-r, ., -f, json, -o, bandit-report.json]
+```
+
+### JavaScript/TypeScript Project
+```yaml
+# .pre-commit-config.yaml
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.4.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-json
+      - id: check-yaml
+
+  - repo: https://github.com/pre-commit/mirrors-prettier
+    rev: v3.0.0-alpha.4
+    hooks:
+      - id: prettier
+        types_or: [javascript, jsx, ts, tsx, json, yaml, markdown]
+
+  - repo: https://github.com/pre-commit/mirrors-eslint
+    rev: v8.35.0
+    hooks:
+      - id: eslint
+        files: \.(js|jsx|ts|tsx)$
+        types: [file]
+```
+
+## Integration Guidelines
+
+### Repository Setup
+
+When setting up a new repository:
+
+1. **Create pre-commit configuration** based on project language and requirements
+2. **Document setup process** in README.md
+3. **Add to CI/CD pipeline** to ensure hooks run in continuous integration
+4. **Configure IDE integration** for real-time feedback
+
+### Team Onboarding
+
+For new team members:
+
+1. **Include pre-commit setup** in onboarding documentation
+2. **Provide IDE configuration** that matches pre-commit rules
+3. **Explain bypass procedures** for emergency situations
+4. **Share troubleshooting guide** for common hook failures
+
+### Maintenance
+
+Regular maintenance tasks:
+
+1. **Update hook versions** monthly using `pre-commit autoupdate`
+2. **Review and adjust rules** based on team feedback
+3. **Monitor hook performance** and optimize slow hooks
+4. **Add new hooks** as project requirements evolve
+
+## CI/CD Integration
+
+### GitHub Actions Example
+```yaml
+name: Pre-commit
+on: [push, pull_request]
+jobs:
+  pre-commit:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - uses: actions/setup-python@v4
+      with:
+        python-version: '3.x'
+    - uses: pre-commit/action@v3.0.0
+```
+
+### GitLab CI Example
+```yaml
+pre-commit:
+  stage: test
+  image: python:3.9
+  before_script:
+    - pip install pre-commit
+  script:
+    - pre-commit run --all-files
+```
+
+## Quality Metrics and Monitoring
+
+### Tracking Code Quality
+
+Monitor these metrics:
+- **Hook failure rates**: Track which hooks fail most frequently
+- **Commit rejection rates**: Monitor how often commits are rejected
+- **Fix time**: Measure time spent fixing quality issues
+- **Coverage trends**: Track test coverage over time
+
+### Reporting
+
+Generate regular reports on:
+- Code quality trends
+- Most common violations
+- Team compliance rates
+- Tool effectiveness
+
+## Troubleshooting Common Issues
+
+### Hook Failures
+
+**Large files rejected**:
+```bash
+# Temporarily increase limit or use git-lfs
+pre-commit run --hook-stage manual check-added-large-files
+```
+
+**Formatting conflicts**:
+```bash
+# Run formatters and commit the changes
+pre-commit run --all-files
+git add .
+git commit -m "style: apply automated formatting"
+```
+
+**Dependency issues**:
+```bash
+# Clear pre-commit cache and reinstall
+pre-commit clean
+pre-commit install --install-hooks
+```
+
+### Performance Issues
+
+**Slow hooks**:
+- Use `--show-diff-on-failure` to see what's being processed
+- Consider excluding large files or directories
+- Run hooks in parallel where possible
+
+**Cache management**:
+```bash
+# Clear cache if hooks behave unexpectedly
+pre-commit clean
+
+# Check cache status
+pre-commit gc
+```
+
+## Best Practices
+
+### Configuration Management
+- Keep hook versions pinned to specific releases
+- Test configuration changes on feature branches
+- Document any custom hooks or configurations
+- Regularly review and update hook configurations
+
+### Team Adoption
+- Start with basic hooks and gradually add more
+- Provide clear error messages and fixing instructions
+- Allow team input on rule configuration
+- Balance strictness with developer productivity
+
+### Emergency Procedures
+- Document when `--no-verify` is acceptable
+- Establish process for fixing quality issues post-commit
+- Have rollback procedures for problematic hook updates
+- Maintain communication channels for quality issues
+
+## Documentation Requirements
+
+Every repository with automated quality checks should include:
+
+1. **Setup instructions** in README.md
+2. **Troubleshooting guide** for common issues
+3. **Configuration rationale** explaining rule choices
+4. **Update procedures** for maintaining hooks
+5. **Contact information** for quality-related questions
+
+## Benefits of Implementation
+
+Automated code quality provides:
+- **Reduced bugs**: Catch issues before they reach production
+- **Faster reviews**: Automate routine checks
+- **Consistent style**: Maintain uniform code appearance
+- **Knowledge transfer**: Embed best practices in tooling
+- **Developer confidence**: Know code meets standards before sharing

@@ -1,0 +1,22 @@
+# Default configuration for DocGenAI
+
+# AI model settings
+model:
+  # The name of the Hugging Face model to use.
+  name: "Gen-Verse/MMaDA-8B-Base"
+
+# Output settings
+output:
+  # The directory where generated documentation will be saved.
+  dir: "output"
+  # The default filename for the generated markdown file.
+  filename_template: "{original_filename}_docs.md"
+
+# Template settings
+templates:
+  # Path to the directory containing documentation templates.
+  dir: "src/docgenai/templates"
+  # The default template to use for generating documentation.
+  doc_template: "default_doc_template.md"
+  # A style guide to be injected into the AI prompt.
+  style_guide: "default_style_guide.md"
