@@ -6,7 +6,7 @@
 .dockerignore
 Dockerfile
 
-# Poetry
+# Poetry - exclude macOS lock file to allow fresh Linux dependency resolution
 .venv
 poetry.lock
 

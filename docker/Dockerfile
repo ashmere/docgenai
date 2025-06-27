@@ -21,13 +21,14 @@ RUN mkdir -p $HF_HOME $TORCH_HOME
 # Set working directory
 WORKDIR /app
 
-# Copy dependency files first for better layer caching
-COPY pyproject.toml poetry.lock ./
+# Copy only pyproject.toml (no poetry.lock to allow fresh dependency resolution)
+COPY pyproject.toml ./
 
 # Install Poetry and dependencies
+# Let Poetry create a fresh lock file with Linux-compatible dependencies
 RUN pip install --no-cache-dir poetry && \
     poetry config virtualenvs.create false && \
-    poetry install --no-dev
+    poetry install --without dev
 
 # Copy application code
 COPY . .
