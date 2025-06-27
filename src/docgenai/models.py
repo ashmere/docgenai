@@ -6,7 +6,7 @@ from pathlib import Path
 
 import torch
 from PIL import Image
-from transformers import AutoTokenizer, pipeline
+from transformers import AutoTokenizer, BitsAndBytesConfig, pipeline
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -116,10 +116,20 @@ class MMaDANativeModel(AIModel):
             return torch.bfloat16, {}
         elif self.quantization == "8bit" and bnb_available:
             logger.info("📊 Using 8-bit quantization")
-            return torch.bfloat16, {"load_in_8bit": True}
+            quantization_config = BitsAndBytesConfig(
+                load_in_8bit=True,
+                llm_int8_threshold=6.0,
+            )
+            return torch.bfloat16, {"quantization_config": quantization_config}
         elif self.quantization == "4bit" and bnb_available:
-            logger.info("📊 Using 4-bit quantization")
-            return torch.bfloat16, {"load_in_4bit": True}
+            logger.info("📊 Using 4-bit quantization with nf4 (CPU compatible)")
+            quantization_config = BitsAndBytesConfig(
+                load_in_4bit=True,
+                bnb_4bit_quant_type="nf4",  # Use nf4 for CPU compatibility
+                bnb_4bit_compute_dtype=torch.bfloat16,
+                bnb_4bit_use_double_quant=False,
+            )
+            return torch.bfloat16, {"quantization_config": quantization_config}
         else:
             if not bnb_available and self.quantization != "none":
                 logger.warning(

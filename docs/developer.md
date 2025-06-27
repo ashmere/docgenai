@@ -8,7 +8,34 @@ This document contains notes and guidelines for the AI assistant developing this
 - **Configurability**: Prioritize making key aspects like models, prompts, and templates configurable by the user.
 - **Extensibility**: The architecture should make it easy to add new models or new commands in the future.
 
-## 2. Key Implementation Patterns
+## 2. Code Quality and Linting Standards
+
+### Markdown Linting Rules
+
+To maintain consistent documentation quality, follow these markdownlint rules:
+
+- **MD022**: Headings must be surrounded by blank lines (one line above and below)
+- **MD031**: Fenced code blocks must be surrounded by blank lines
+- **MD032**: Lists must be surrounded by blank lines
+- **MD040**: Fenced code blocks must specify a language
+
+**Example of correct formatting:**
+
+- Headings need blank lines above and below
+- Lists need blank lines above and below
+- Code blocks need blank lines above and below
+- Code blocks must specify a language (e.g., `python`, `bash`, `yaml`)
+
+### Pre-commit Hooks
+
+Run `pre-commit run --all-files` before committing to ensure:
+
+- Markdown formatting compliance
+- Python code formatting (black, isort)
+- Trailing whitespace removal
+- End-of-file fixing
+
+## 3. Key Implementation Patterns
 
 ### AI Model Abstraction
 
@@ -70,7 +97,7 @@ context = {
 }
 ```
 
-## 3. Platform Compatibility and Docker Strategy
+## 4. Platform Compatibility and Docker Strategy
 
 ### M1/M2/M3 Mac Compatibility Issues
 
@@ -82,7 +109,8 @@ context = {
 4. **Memory constraints**: Full precision models require more RAM than quantized versions
 
 **Symptoms on M1/M2/M3 Macs**:
-```
+
+```bash
 Warning: 8bit quantization requested but bitsandbytes not available. Using full precision.
 You are using a model of type llada to instantiate a model of type mmada. This is not supported for all configurations of models and can yield errors.
 ```
@@ -100,6 +128,7 @@ You are using a model of type llada to instantiate a model of type mmada. This i
 ### Docker Configuration
 
 #### Dockerfile Optimizations
+
 ```dockerfile
 # Use official Python image with full library support
 FROM python:3.12-slim
@@ -127,6 +156,7 @@ WORKDIR /app
 ```
 
 #### Volume Mounts for Performance
+
 ```bash
 # Mount host cache to avoid re-downloading models
 docker run -v ~/.cache/huggingface:/app/.cache/huggingface docgenai
@@ -145,6 +175,7 @@ docker run -it \
 ### Performance Optimizations
 
 #### Quantization Settings
+
 ```yaml
 # config.yaml - Recommended settings for different scenarios
 model:
@@ -154,11 +185,13 @@ model:
 ```
 
 #### Memory Management
+
 - **4-bit quantization**: ~2GB RAM usage, fastest loading
 - **8-bit quantization**: ~4GB RAM usage, good balance
 - **Full precision**: ~16GB RAM usage, highest quality
 
 #### Docker Resource Limits
+
 ```bash
 # Allocate sufficient resources to Docker
 docker run --memory=8g --cpus=4 docgenai
@@ -167,9 +200,10 @@ docker run --memory=8g --cpus=4 docgenai
 # Settings > Resources > Memory: 8GB minimum
 ```
 
-## 4. Development Workflow
+## 5. Development Workflow
 
 ### Local Development (Docker)
+
 ```bash
 # Build the image
 docker build -t docgenai .
@@ -185,6 +219,7 @@ poetry run docgenai generate src/ --output-dir output
 ```
 
 ### Native Development (Not Recommended)
+
 If you must develop natively on M1/M2/M3:
 
 1. **Expect slow performance**: Model loading will take 1+ hours
@@ -216,23 +251,26 @@ The application now includes comprehensive logging to help debug performance iss
 ### Troubleshooting
 
 #### If model loading hangs:
+
 1. **Check Docker resources**: Ensure sufficient memory allocation
 2. **Monitor logs**: Look for progress indicators in the output
 3. **Verify quantization**: Ensure bitsandbytes is working in container
 4. **Check network**: Model downloads require stable internet
 
 #### If quantization fails:
+
 1. **Use Docker**: Native Mac development has quantization issues
 2. **Update dependencies**: Ensure latest bitsandbytes version
 3. **Check GPU support**: CUDA availability affects quantization options
 
 #### Performance optimization:
+
 1. **Use 4-bit quantization**: Fastest loading with good quality
 2. **Cache models**: Mount HuggingFace cache directory
 3. **Limit scope**: Process smaller codebases during development
 4. **Monitor resources**: Use `docker stats` to check resource usage
 
-## 5. Dockerization Strategy
+## 6. Dockerization Strategy
 
 - **Model Caching**: The MMaDA model is large. To avoid re-downloading it on every `docker run`, we will mount a host directory to the container's Hugging Face cache directory (`/root/.cache/huggingface`).
 - **Base Image**: Use a slim Python image (`python:3.12-slim`).
@@ -240,7 +278,7 @@ The application now includes comprehensive logging to help debug performance iss
 - **Resource Allocation**: Ensure Docker has sufficient memory (8GB+) and CPU allocation
 - **Quantization Support**: Docker provides full Linux environment with proper bitsandbytes support
 
-## 4. CLI Framework
+## 7. CLI Framework
 
 We will use `click` for its simplicity and power in creating nested commands and handling options.
 

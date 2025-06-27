@@ -24,14 +24,15 @@ WORKDIR /app
 # Copy only pyproject.toml (no poetry.lock to allow fresh dependency resolution)
 COPY pyproject.toml ./
 
-# Install Poetry and dependencies
-# Let Poetry create a fresh lock file with Linux-compatible dependencies
+# Install Poetry
 RUN pip install --no-cache-dir poetry && \
-    poetry config virtualenvs.create false && \
-    poetry install --without dev
+    poetry config virtualenvs.create false
 
 # Copy application code
 COPY . .
+
+# Install dependencies and project with fresh Linux-compatible lock file
+RUN poetry install --without dev
 
 # Create output directory
 RUN mkdir -p /app/output
