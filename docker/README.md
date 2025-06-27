@@ -81,6 +81,7 @@ docker run --rm -it \
 ## Example Commands
 
 ### Generate Documentation for Single File
+
 ```bash
 docker run --rm \
   -v ~/.cache/huggingface:/app/.cache/huggingface \
@@ -89,6 +90,7 @@ docker run --rm \
 ```
 
 ### Generate Documentation for Directory
+
 ```bash
 docker run --rm \
   -v ~/.cache/huggingface:/app/.cache/huggingface \
@@ -97,6 +99,7 @@ docker run --rm \
 ```
 
 ### Generate Diagram
+
 ```bash
 docker run --rm \
   -v ~/.cache/huggingface:/app/.cache/huggingface \
@@ -105,6 +108,7 @@ docker run --rm \
 ```
 
 ### Verbose Logging
+
 ```bash
 docker run --rm \
   -v ~/.cache/huggingface:/app/.cache/huggingface \
@@ -115,6 +119,7 @@ docker run --rm \
 ## Performance Optimization
 
 ### First Run (Model Download)
+
 The first run will download the MMaDA model (~15GB). This happens once:
 
 ```bash
@@ -137,6 +142,7 @@ docker run --rm \
 ## Troubleshooting
 
 ### Model Download Issues
+
 ```bash
 # Check if model download is progressing
 docker run --rm -it \
@@ -148,6 +154,7 @@ ls -la /app/.cache/huggingface/hub/
 ```
 
 ### Memory Issues
+
 ```bash
 # Check Docker memory allocation
 docker run --rm \
@@ -158,6 +165,7 @@ docker run --rm \
 ```
 
 ### Permission Issues (Linux)
+
 ```bash
 # Fix output directory permissions
 sudo chown -R $USER:$USER output/
@@ -192,6 +200,7 @@ output:
 ```
 
 Use with:
+
 ```bash
 docker run --rm \
   -v ~/.cache/huggingface:/app/.cache/huggingface \
@@ -203,6 +212,7 @@ docker run --rm \
 ## Development Workflow
 
 ### Building and Testing
+
 ```bash
 # Build image
 docker build -f docker/Dockerfile -t docgenai .
@@ -219,6 +229,7 @@ docker run --rm \
 ```
 
 ### Live Development
+
 ```bash
 # Mount source for live changes
 docker run --rm -it \
@@ -242,6 +253,7 @@ For production use, consider:
 5. **Persistent volumes** for model cache
 
 Example production command:
+
 ```bash
 docker run -d \
   --name docgenai-service \

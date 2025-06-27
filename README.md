@@ -136,12 +136,14 @@ output:
 ## Troubleshooting
 
 ### Model Loading Issues
+
 - **Use Docker**: Resolves most compatibility issues
 - **Check memory**: Ensure Docker has 8GB+ allocated
 - **Verify network**: Model downloads require stable internet
 - **Use 4-bit quantization**: Fastest loading option
 
 ### Common Issues
+
 - **Slow performance on Mac**: Use Docker instead of native installation
 - **Out of memory**: Increase Docker memory limit or use 4-bit quantization
 - **Model download hangs**: Check internet connection and Docker resources
@@ -149,6 +151,7 @@ output:
 ## Development
 
 See [docs/developer.md](docs/developer.md) for detailed development guidelines, including:
+
 - Platform compatibility information
 - Docker development workflow
 - Performance optimization tips
@@ -156,7 +159,7 @@ See [docs/developer.md](docs/developer.md) for detailed development guidelines, 
 
 ## Project Structure
 
-```
+```text
 docgenai/
 ├── src/docgenai/          # Main application code
 │   ├── models.py          # AI model abstractions
