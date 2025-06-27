@@ -15,7 +15,7 @@ This document outlines the plan for creating a Python-based CLI tool, "DocGenAI,
 
 ## 3. Technical Stack
 
-- **Language**: Python 3.9+
+- **Language**: Python 3.12+
 - **CLI Framework**: `click` (for a rich and user-friendly command-line interface)
 - **AI Model Interaction**: Hugging Face `transformers` library.
 - **Templating**: `Jinja2`

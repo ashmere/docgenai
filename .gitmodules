@@ -1,0 +1,3 @@
+[submodule "external/MMaDA"]
+	path = external/MMaDA
+	url = https://github.com/Gen-Verse/MMaDA.git

@@ -23,6 +23,6 @@ class TemplateLoader:
         """Loads the style guide."""
         return self.load_template(name)
 
-    def load_doc_template(self, name: str = "default_doc_template.md") -> str:
+    def load_documentation(self, name: str = "default_doc_template.md") -> str:
         """Loads the documentation template."""
         return self.load_template(name)

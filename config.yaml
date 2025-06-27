@@ -3,8 +3,32 @@
 # AI model settings
 model:
   # The name of the Hugging Face model to use.
-  name: "MMaDA"
-  hugging_face_token: "YOUR_HUGGING_FACE_TOKEN_HERE"
+  name: "Gen-Verse/MMaDA-8B-Base"
+  # Note: Set your Hugging Face token via the HUGGING_FACE_TOKEN environment variable
+  # Do not put tokens in this config file as they may be accidentally committed to git
+
+  # Quantization options: "none", "8bit", "4bit"
+  # 8bit: 2x faster loading, ~95-98% quality (recommended)
+  # 4bit: 4x faster loading, ~90-95% quality
+  # none: Full precision, slower loading, best quality
+  quantization: "4bit"
+
+  # Keep model in memory between files (faster for multiple files)
+  session_cache: true
+
+# Caching settings
+cache:
+  # Enable all caching features
+  enabled: true
+
+  # Cache generation results to avoid re-generating for same content
+  generation_cache: true
+
+  # Directory to store cache files
+  cache_dir: ".cache/docgenai"
+
+  # Maximum cache size in MB (old entries deleted when exceeded)
+  max_cache_size_mb: 1000
 
 # Output settings
 output:

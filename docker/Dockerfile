@@ -1,28 +1,46 @@
-# Use a slim Python base image
-FROM python:3.10-slim
+# Use Python 3.12 with full Linux support for proper quantization
+FROM python:3.12-slim
 
-# Set the working directory
+# Install system dependencies for model compilation and quantization
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    git \
+    wget \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set up environment variables for model caching and optimization
+ENV HF_HOME=/app/.cache/huggingface
+ENV TRANSFORMERS_CACHE=/app/.cache/huggingface
+ENV HF_DATASETS_CACHE=/app/.cache/huggingface
+ENV TORCH_HOME=/app/.cache/torch
+
+# Create cache directories
+RUN mkdir -p $HF_HOME $TORCH_HOME
+
+# Set working directory
 WORKDIR /app
 
-# Install poetry
-RUN pip install poetry
+# Copy dependency files first for better layer caching
+COPY pyproject.toml poetry.lock ./
 
-# Copy only the files needed for dependency installation
-COPY pyproject.toml poetry.lock* ./
+# Install Poetry and dependencies
+RUN pip install --no-cache-dir poetry && \
+    poetry config virtualenvs.create false && \
+    poetry install --no-dev
 
-# Install dependencies
-# --no-root: Don't install the project itself, only dependencies
-RUN poetry install --no-root --no-dev
+# Copy application code
+COPY . .
 
-# Copy the rest of the application code
-COPY src/ /app/src
+# Create output directory
+RUN mkdir -p /app/output
 
-# Set up the entrypoint
-COPY docker/entrypoint.sh /app/entrypoint.sh
-RUN chmod +x /app/entrypoint.sh
+# Set environment variables for better performance
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1
 
-# The entrypoint will execute the CLI
-ENTRYPOINT ["/app/entrypoint.sh"]
+# Expose any necessary ports (if adding web interface later)
+EXPOSE 8000
 
-# Default command can be --help
-CMD ["--help"]
+# Default command
+CMD ["poetry", "run", "docgenai", "--help"]
