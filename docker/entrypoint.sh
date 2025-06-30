@@ -33,4 +33,4 @@ fi
 
 # Execute the docgenai CLI with arguments
 log "Executing: docgenai $*"
-exec poetry run docgenai "$@"
+exec docgenai "$@"

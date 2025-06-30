@@ -28,21 +28,23 @@ WORKDIR /app
 # Copy dependency files first for better caching
 COPY pyproject.toml poetry.lock* ./
 
-# Install Poetry and configure it
-RUN pip install --no-cache-dir poetry && \
-    poetry config virtualenvs.create false && \
-    poetry config installer.max-workers 10
-
-# Install dependencies
-RUN poetry install --without dev --no-root
+# Install Poetry and use it to build the package
+RUN pip install --no-cache-dir poetry
 
 # Copy application code and entrypoint
 COPY . .
 COPY docker/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
-# Install the application
-RUN poetry install --without dev
+# Build and install the package using Poetry
+RUN poetry build && \
+    pip install --no-cache-dir dist/*.whl && \
+    pip install --no-cache-dir \
+        torch \
+        transformers \
+        accelerate \
+        bitsandbytes \
+        huggingface-hub
 
 # Create output directory
 RUN mkdir -p /app/output
@@ -62,7 +64,7 @@ USER docgenai
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD poetry run docgenai info || exit 1
+    CMD docgenai info || exit 1
 
 ENTRYPOINT ["/entrypoint.sh"]
 CMD ["--help"]
