@@ -1,15 +1,10 @@
 """
-AI Model abstraction layer for DocGenAI.
+Model implementations for DocGenAI.
 
-This module provides platform-aware model selection:
-- macOS: Uses MLX-optimized DeepSeek-Coder-V2-Lite-Instruct-8bit model
-- Other platforms: Uses standard DeepSeek-Coder-V2-Lite-Instruct
-
-The models are designed to generate comprehensive documentation
-for codebases with focus on clarity and architectural understanding.
+This module provides model classes for different backends (MLX and Transformers)
+with automatic platform detection and optimized configurations.
 """
 
-import hashlib
 import logging
 import os
 import platform
@@ -18,8 +13,9 @@ import time
 import warnings
 from abc import ABC, abstractmethod
 from contextlib import contextmanager
+from io import StringIO
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional, Union
 
 # Suppress MLX deprecation warnings for cleaner output
 warnings.filterwarnings("ignore", message=".*mx.metal.* is deprecated.*")
@@ -63,6 +59,29 @@ class AIModel(ABC):
     def get_model_info(self) -> Dict[str, Any]:
         """Get information about the model."""
         pass
+
+    @staticmethod
+    def _get_platform_info():
+        """Get platform information for model selection."""
+        system = platform.system()
+        machine = platform.machine()
+
+        # Check if MLX is available (for Apple Silicon, even in Docker)
+        mlx_available = False
+        try:
+            import mlx.core as mx
+
+            mlx_available = True
+        except ImportError:
+            mlx_available = False
+
+        # Platform selection logic:
+        # 1. If MLX is available and we're on ARM64, use MLX
+        # 2. Otherwise, use transformers
+        if mlx_available and machine in ["arm64", "aarch64"]:
+            return "mlx"
+        else:
+            return "transformers"
 
 
 class DeepSeekCoderModel(AIModel):
@@ -168,74 +187,67 @@ class DeepSeekCoderModel(AIModel):
             from transformers import (
                 AutoModelForCausalLM,
                 AutoTokenizer,
-                BitsAndBytesConfig,
             )
 
-            # Set up quantization config if requested
-            quantization_config = None
-            if self.quantization == "4bit":
-                logger.info("⚙️  Setting up 4-bit quantization...")
-                quantization_config = BitsAndBytesConfig(
-                    load_in_4bit=True,
-                    bnb_4bit_quant_type="nf4",
-                    bnb_4bit_compute_dtype=torch.float16,
-                    bnb_4bit_use_double_quant=True,
+            # Check if this is an AWQ model (already quantized)
+            is_awq_model = "awq" in self.model_path.lower()
+
+            if is_awq_model:
+                logger.info(
+                    "⚙️  Detected AWQ model - loading without additional quantization"
                 )
-            elif self.quantization == "8bit":
-                logger.info("⚙️  Setting up 8-bit quantization...")
-                quantization_config = BitsAndBytesConfig(
-                    load_in_8bit=True,
-                )
-
-            # Load tokenizer
-            logger.info("📝 Step 2/4: Loading tokenizer...")
-            self.tokenizer = AutoTokenizer.from_pretrained(
-                self.model_path, trust_remote_code=self.trust_remote_code
-            )
-            logger.info("✅ Tokenizer loaded")
-
-            # Load model
-            logger.info("🧠 Step 3/4: Loading model...")
-
-            # Determine torch dtype
-            if self.torch_dtype == "auto":
-                torch_dtype = (
-                    torch.float16 if torch.cuda.is_available() else torch.float32
+                # AWQ models are already quantized, load them directly
+                self.model = AutoModelForCausalLM.from_pretrained(
+                    self.model_path,
+                    torch_dtype=torch.float16,
+                    device_map="auto",
+                    trust_remote_code=True,
+                    low_cpu_mem_usage=True,
                 )
             else:
-                torch_dtype = getattr(torch, self.torch_dtype, torch.float32)
+                # For non-AWQ models, use 4-bit quantization if requested
+                logger.info(f"⚙️  Setting up {self.quantization} quantization...")
 
-            model_kwargs = {
-                "trust_remote_code": self.trust_remote_code,
-                "torch_dtype": torch_dtype,
-            }
+                if self.quantization == "4bit":
+                    self.model = AutoModelForCausalLM.from_pretrained(
+                        self.model_path,
+                        load_in_4bit=True,
+                        device_map="auto",
+                        torch_dtype=torch.float16,
+                        trust_remote_code=True,
+                        low_cpu_mem_usage=True,
+                    )
+                elif self.quantization == "8bit":
+                    self.model = AutoModelForCausalLM.from_pretrained(
+                        self.model_path,
+                        load_in_8bit=True,
+                        device_map="auto",
+                        torch_dtype=torch.float16,
+                        trust_remote_code=True,
+                        low_cpu_mem_usage=True,
+                    )
+                else:
+                    self.model = AutoModelForCausalLM.from_pretrained(
+                        self.model_path,
+                        device_map="auto",
+                        torch_dtype=torch.float16,
+                        trust_remote_code=True,
+                        low_cpu_mem_usage=True,
+                    )
 
-            # Add quantization config if specified
-            if quantization_config:
-                model_kwargs["quantization_config"] = quantization_config
-                model_kwargs["device_map"] = self.device_map
-            elif torch.cuda.is_available():
-                model_kwargs["device_map"] = self.device_map
-
-            self.model = AutoModelForCausalLM.from_pretrained(
-                self.model_path, **model_kwargs
+            logger.info("📝 Step 2/4: Loading tokenizer...")
+            self.tokenizer = AutoTokenizer.from_pretrained(
+                self.model_path, trust_remote_code=True
             )
-            logger.info("✅ Model loaded")
 
-            # Set up generation config
-            logger.info("⚙️  Step 4/4: Configuring generation parameters...")
-            self.generation_config = {
-                "max_new_tokens": self.max_tokens,
-                "temperature": self.temperature,
-                "top_p": self.top_p,
-                "top_k": self.top_k,
-                "do_sample": self.do_sample,
-                "pad_token_id": self.tokenizer.eos_token_id,
-            }
-            logger.info("✅ Generation config set")
+            # Ensure tokenizer has pad token
+            if self.tokenizer.pad_token is None:
+                self.tokenizer.pad_token = self.tokenizer.eos_token
+
+            logger.info("✅ Model and tokenizer loaded successfully")
 
         except Exception as e:
-            logger.error(f"❌ Failed to load transformers model: {str(e)}")
+            logger.error(f"Failed to load transformers model: {e}")
             raise
 
     def _generate_with_mlx(self, prompt: str, max_tokens: int = None) -> str:
@@ -442,25 +454,29 @@ Focus on:
 
 def create_model(config: Optional[Dict[str, Any]] = None) -> AIModel:
     """
-    Create an appropriate AI model instance based on configuration.
+    Create an AI model instance based on platform and configuration.
 
     Args:
-        config: Configuration dictionary
+        config: Optional configuration dictionary
 
     Returns:
-        AIModel instance (DeepSeekCoderModel)
+        AIModel instance (either MLXModel or TransformersModel)
     """
-    logger.info("🏭 Creating AI model instance...")
+    from .config import load_config
 
-    try:
-        model = DeepSeekCoderModel(config)
-        logger.info(
-            f"✅ Created {model.__class__.__name__} with {model.backend} backend"
-        )
-        return model
-    except Exception as e:
-        logger.error(f"❌ Failed to create model: {str(e)}")
-        raise
+    if config is None:
+        config = load_config()
+
+    # Use the new platform detection method
+    backend = AIModel._get_platform_info()
+
+    logger.info(f"🖥️  Platform detected: {platform.system()}")
+    logger.info(f"🤖 Model backend: {backend}")
+
+    if backend == "mlx":
+        return MLXModel(config)
+    else:
+        return TransformersModel(config)
 
 
 # Backward compatibility aliases

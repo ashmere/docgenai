@@ -9,17 +9,20 @@ model:
 
   # Model names (automatically selected based on platform)
   mlx_model: "mlx-community/DeepSeek-Coder-V2-Lite-Instruct-8bit"     # macOS (Apple Silicon)
-  transformers_model: "deepseek-ai/DeepSeek-Coder-V2-Lite-Instruct"   # Linux/Windows
+  transformers_model: "TechxGenus/DeepSeek-Coder-V2-Lite-Instruct-AWQ"   # Linux/Windows - AWQ 4-bit quantized
 
   # Generation parameters
-  temperature: 0.7          # Creativity level (0.0-2.0)
-  max_tokens: 2048          # Maximum tokens to generate
-  top_p: 0.8               # Nucleus sampling parameter
-  top_k: 50                # Top-k sampling parameter
+  temperature: 0.1
+  max_tokens: 4000
+  top_p: 0.9
+  min_p: 0.05
+  top_k: 50
   do_sample: true          # Enable sampling vs greedy decoding
 
   # Quantization settings (non-MLX platforms)
   quantization: "4bit"     # Options: "none", "8bit", "4bit"
+  load_in_4bit: true
+  load_in_8bit: false
 
   # Model caching
   session_cache: true      # Keep model in memory between generations

@@ -19,6 +19,7 @@ CPUS="4"
 IMAGE_NAME="docgenai"
 VERBOSE=false
 BUILD_IMAGE=false
+BUILD_PLATFORM="auto"
 
 # Help function
 show_help() {
@@ -33,6 +34,7 @@ show_help() {
     echo "  -m, --memory   Set memory limit (default: 12g)"
     echo "  -c, --cpus     Set CPU limit (default: 4)"
     echo "  --build        Build the Docker image first"
+    echo "  --platform     Set Docker build platform"
     echo ""
     echo -e "${YELLOW}Commands:${NC}"
     echo "  generate FILE/DIR     Generate documentation for files or directories"
@@ -61,8 +63,14 @@ show_help() {
     echo -e "${YELLOW}Performance Notes:${NC}"
     echo "  • First run downloads DeepSeek model (~4-8GB)"
     echo "  • Subsequent runs use cached model (much faster)"
+    echo "  • Model cache is platform-specific (e.g., ~/.cache/models-docker-amd64)"
     echo "  • Recommended: 12GB+ memory, 4+ CPUs"
     echo "  • Uses 4-bit quantization by default for efficiency"
+    echo ""
+    echo -e "${YELLOW}Cache Locations:${NC}"
+    echo "  • Model cache: ~/.cache/models-docker-<platform>/"
+    echo "  • Output cache: ./.docgenai_cache/"
+    echo "  • Generated docs: ./output/"
 }
 
 # Logging functions
@@ -90,6 +98,32 @@ check_docker() {
     fi
 }
 
+# Get Docker platform architecture
+get_docker_platform() {
+    local platform
+    platform=$(docker version --format '{{.Server.Arch}}' 2>/dev/null)
+
+    if [ -z "$platform" ]; then
+        # Fallback to system architecture if Docker platform detection fails
+        case "$(uname -m)" in
+            x86_64)
+                platform="amd64"
+                ;;
+            arm64|aarch64)
+                platform="arm64"
+                ;;
+            armv7l)
+                platform="arm"
+                ;;
+            *)
+                platform="unknown"
+                ;;
+        esac
+    fi
+
+    echo "$platform"
+}
+
 # Check if image exists
 check_image() {
     if ! docker image inspect $IMAGE_NAME >/dev/null 2>&1; then
@@ -99,24 +133,43 @@ check_image() {
     fi
 }
 
-# Build Docker image
+# Build Docker image with platform detection
 build_image() {
-    log_info "Building DocGenAI Docker image for DeepSeek-Coder-V2-Lite..."
-    if docker build -f docker/Dockerfile -t $IMAGE_NAME .; then
-        log_success "Docker image built successfully"
-    else
-        log_error "Failed to build Docker image"
-        exit 1
+    local platform=""
+    local build_args=""
+
+    if [ "$BUILD_PLATFORM" != "auto" ]; then
+        platform="--platform $BUILD_PLATFORM"
+        build_args="--build-arg TARGETPLATFORM=$BUILD_PLATFORM"
     fi
+
+    log_info "Building Docker image for platform: ${BUILD_PLATFORM:-auto}"
+    log_info "This may take several minutes..."
+
+    if [ "$VERBOSE" = true ]; then
+        docker build $platform $build_args -f docker/Dockerfile -t $IMAGE_NAME .
+    else
+        docker build $platform $build_args -f docker/Dockerfile -t $IMAGE_NAME . > /dev/null 2>&1
+        if [ $? -ne 0 ]; then
+            log_error "Docker build failed. Run with -v for details."
+            exit 1
+        fi
+    fi
+
+    log_success "Docker image built successfully"
 }
 
 # Setup cache directories
 setup_cache() {
-    local model_cache_dir="$HOME/.cache/models"
+    local platform
+    platform=$(get_docker_platform)
+
+    # Platform-specific model cache directory
+    local model_cache_dir="$HOME/.cache/models-docker-$platform"
     local output_cache_dir="$(pwd)/.docgenai_cache"
 
     if [ ! -d "$model_cache_dir" ]; then
-        log_info "Creating model cache directory: $model_cache_dir"
+        log_info "Creating platform-specific model cache directory ($platform): $model_cache_dir"
         mkdir -p "$model_cache_dir"
     fi
 
@@ -124,6 +177,9 @@ setup_cache() {
         log_info "Creating output cache directory: $output_cache_dir"
         mkdir -p "$output_cache_dir"
     fi
+
+    # Export for use in get_docker_args
+    export MODEL_CACHE_DIR="$model_cache_dir"
 }
 
 # Setup output directory
@@ -141,7 +197,7 @@ get_docker_args() {
         "--rm"
         "--memory=$MEMORY"
         "--cpus=$CPUS"
-        "-v" "$HOME/.cache/models:/app/.cache/models"
+        "-v" "$MODEL_CACHE_DIR:/app/.cache/models"
         "-v" "$(pwd)/.docgenai_cache:/app/.docgenai_cache"
         "-v" "$(pwd)/output:/app/output"
     )
@@ -258,6 +314,10 @@ while [[ $# -gt 0 ]]; do
         --build)
             BUILD_IMAGE=true
             shift
+            ;;
+        --platform)
+            BUILD_PLATFORM="$2"
+            shift 2
             ;;
         *)
             break
