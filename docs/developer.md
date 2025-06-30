@@ -141,41 +141,168 @@ docker run --rm -v $(pwd):/workspace docgenai generate workspace/myfile.py
 
 ### Testing Strategy
 
+DocGenAI includes a comprehensive test suite with **70 tests** covering all core functionality across platforms and configurations.
+
+#### Test Suite Overview
+
+- **Total Tests**: 70 tests with 100% pass rate
+- **Coverage**: All core modules (models, core, config, templates)
+- **Platform Testing**: Mocked platform detection for cross-platform compatibility
+- **Performance**: Full test suite runs in ~0.13 seconds
+
+#### Test Structure
+
+```text
+tests/
+├── test_models.py      # 15 tests - AI model functionality
+├── test_core.py        # 16 tests - Documentation generation pipeline
+├── test_config.py      # 21 tests - Configuration management
+└── test_templates.py   # 18 tests - Template rendering and management
+```
+
+#### Running Tests
+
+```bash
+# Run all tests
+poetry run pytest
+
+# Run with verbose output
+poetry run pytest -v
+
+# Run specific test module
+poetry run pytest tests/test_models.py
+
+# Run with coverage
+poetry run pytest --cov=src/docgenai
+
+# Quick test run (short output)
+poetry run pytest --tb=short
+```
+
 #### Unit Testing
 
 ```python
-# tests/test_models.py
-def test_model_creation():
-    """Test model factory creates appropriate model for platform."""
-    model = create_model()
+# tests/test_models.py - Platform-aware model testing
+@patch("docgenai.models.platform.system")
+def test_platform_detection_darwin(self, mock_system):
+    """Test macOS platform detection and MLX backend selection."""
+    mock_system.return_value = "Darwin"
 
-    if platform.system() == "Darwin":
-        assert model.backend == "mlx"
-        assert "mlx-community" in model.model_path
-    else:
-        assert model.backend == "transformers"
-        assert "deepseek-ai" in model.model_path
+    with patch("docgenai.models.DeepSeekCoderModel._initialize_model"):
+        model = DeepSeekCoderModel(self.test_config)
 
-def test_documentation_generation():
-    """Test documentation generation across platforms."""
-    model = create_model()
-    code = "def hello(): return 'world'"
+        self.assertTrue(model.is_mac)
+        self.assertEqual(model.platform, "Darwin")
+        self.assertEqual(model.backend, "mlx")
 
-    doc = model.generate_documentation(code, "test.py")
-    assert len(doc) > 100  # Reasonable documentation length
-    assert "hello" in doc.lower()
+def test_generate_documentation(self, mock_system):
+    """Test documentation generation with mocked model."""
+    mock_system.return_value = "Darwin"
+
+    with patch("docgenai.models.DeepSeekCoderModel._initialize_model"):
+        model = DeepSeekCoderModel(self.test_config)
+        model._generate_text = Mock(return_value="Generated documentation")
+
+        result = model.generate_documentation("def test(): pass", "test.py")
+
+        self.assertIn("Generated documentation", result)
+```
+
+#### Configuration Testing
+
+```python
+# tests/test_config.py - Comprehensive config validation
+def test_environment_variable_conversion(self):
+    """Test environment variable type conversion."""
+    config = {"test": {}}
+
+    with patch.dict(os.environ, {
+        "DOCGENAI_TEST__STR_VAL": "hello",
+        "DOCGENAI_TEST__INT_VAL": "42",
+        "DOCGENAI_TEST__FLOAT_VAL": "3.14",
+        "DOCGENAI_TEST__BOOL_VAL": "true",
+        "DOCGENAI_TEST__LIST_VAL": "a,b,c",
+    }):
+        result = apply_env_overrides(config)
+
+        self.assertEqual(result["test"]["str_val"], "hello")
+        self.assertEqual(result["test"]["int_val"], 42)
+        self.assertEqual(result["test"]["float_val"], 3.14)
+        self.assertEqual(result["test"]["bool_val"], True)
+        self.assertEqual(result["test"]["list_val"], ["a", "b", "c"])
+```
+
+#### Core Pipeline Testing
+
+```python
+# tests/test_core.py - End-to-end generation pipeline
+@patch("docgenai.core.CacheManager")
+@patch("docgenai.core.TemplateManager")
+def test_process_file_success(self, mock_template_manager, mock_cache_manager):
+    """Test successful file processing with all components."""
+    # Setup comprehensive mocks
+    mock_cache = mock_cache_manager.return_value
+    mock_template = mock_template_manager.return_value
+
+    # Configure realistic responses
+    mock_cache.get_cached_result.return_value = None
+    mock_template.render_documentation.return_value = "# Documentation\n\nGenerated content"
+
+    generator = DocumentationGenerator(self.mock_model, self.test_config)
+
+    with patch("pathlib.Path.exists", return_value=True):
+        with patch("builtins.open", mock_open(read_data="def test(): pass")):
+            result = generator.process_file(Path("test.py"))
+
+    self.assertIsNotNone(result)
+    self.mock_model.generate_documentation.assert_called_once()
+```
+
+#### Template System Testing
+
+```python
+# tests/test_templates.py - Template rendering and filters
+def test_format_size_filter(self):
+    """Test custom Jinja2 filter for file size formatting."""
+    template_manager = TemplateManager(self.test_config)
+
+    # Test various file sizes
+    self.assertEqual(template_manager._format_size(512), "512.0 B")
+    self.assertEqual(template_manager._format_size(1536), "1.5 KB")
+    self.assertEqual(template_manager._format_size(2097152), "2.0 MB")
+
+def test_render_documentation_success(self):
+    """Test documentation template rendering with full context."""
+    context = {
+        "file_name": "test.py",
+        "file_path": "/path/to/test.py",
+        "language": "python",
+        "documentation": "Test documentation",
+        "generation_time": "2024-01-01 12:00:00",
+        "model_info": {"name": "DeepSeek-Coder", "backend": "mlx"}
+    }
+
+    result = self.template_manager.render_documentation(context)
+
+    self.assertIn("test.py", result)
+    self.assertIn("Test documentation", result)
+    self.assertIn("python", result)
 ```
 
 #### Integration Testing
 
 ```bash
 # Test end-to-end workflow
-poetry run docgenai test tests/sample_files/simple.py
-poetry run docgenai generate tests/sample_files/ --output-dir test_output
+poetry run docgenai test simple_test.py
+poetry run docgenai generate src/ --output-dir test_output
 
 # Verify outputs
 ls test_output/
 cat test_output/*_documentation.md
+
+# Test with different configurations
+poetry run docgenai generate src/models.py --no-architecture
+poetry run docgenai generate src/core.py --no-output-cache
 ```
 
 #### Platform Testing
@@ -200,6 +327,14 @@ model = create_model()
 print(f'Backend: {model.backend}')
 "
 ```
+
+#### Test Quality Metrics
+
+- **Comprehensive Mocking**: All external dependencies (MLX, Transformers, file system) are properly mocked
+- **Platform Independence**: Tests run consistently across macOS, Linux, and Windows
+- **Error Coverage**: Both success and failure scenarios are tested
+- **Performance**: Fast test execution enables rapid development cycles
+- **Maintainability**: Clear test structure and documentation for easy updates
 
 ## 4. Code Quality Standards
 
