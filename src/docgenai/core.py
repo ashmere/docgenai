@@ -1,225 +1,531 @@
-# This file will contain the core logic for the documentation generation
-# and improvement processes. It will be called by the CLI commands.
+"""
+Core documentation generation logic for DocGenAI.
+
+This module handles the main workflow of analyzing code files/directories
+and generating comprehensive documentation using DeepSeek-Coder models
+with platform-aware optimization and comprehensive configuration support.
+"""
 
 import logging
+import os
 import time
 from pathlib import Path
+from typing import Any, Dict, List, Optional
 
-import click
+from .cache import CacheManager
+from .config import (get_cache_config, get_generation_config, get_model_config,
+                     get_output_config)
+from .models import AIModel
+from .templates import TemplateManager
 
-from .cache import GenerationCache, ModelCache
-from .config import AppConfig, load_config
-from .models import MMADA_AVAILABLE, AIModel, MMaDANativeModel
-from .templates import TemplateLoader
-
-# Set up logging
 logger = logging.getLogger(__name__)
 
-# Fallback import for the old MMaDAModel if native is not available
-if not MMADA_AVAILABLE:
-    from .models import MMaDAModel
 
-# Global model cache for session-level caching
-_model_cache = ModelCache()
+class DocumentationGenerator:
+    """
+    Main class for generating documentation from code.
 
+    Handles file processing, model interaction, template rendering,
+    and output generation with comprehensive caching support and
+    platform-aware model optimization.
+    """
 
-class CoreProcessor:
-    def __init__(
-        self,
-        config_path: Path = None,
-        output_dir: Path = None,
-        hugging_face_token: str = None,
-    ):
-        logger.info("🔧 Initializing CoreProcessor...")
+    def __init__(self, model: AIModel, config: Dict[str, Any]):
+        """
+        Initialize the documentation generator.
+
+        Args:
+            model: Initialized AI model instance
+            config: Complete configuration dictionary
+        """
+        self.model = model
+        self.config = config
+
+        # Extract configuration sections
+        self.cache_config = get_cache_config(config)
+        self.output_config = get_output_config(config)
+        self.generation_config = get_generation_config(config)
+        self.model_config = get_model_config(config)
+
+        # Initialize components
+        self.cache_manager = CacheManager(self.cache_config)
+        self.template_manager = TemplateManager(config.get("templates", {}))
+
+        logger.info("🚀 DocumentationGenerator initialized")
+        logger.info(f"📋 Model: {self.model.get_model_info()['model_path']}")
+        logger.info(f"⚙️  Backend: {self.model.get_model_info()['backend']}")
+
+    def process_file(self, file_path: Path) -> Optional[str]:
+        """
+        Process a single file and generate documentation.
+
+        Args:
+            file_path: Path to the source code file
+
+        Returns:
+            Path to generated documentation file, or None if failed
+        """
+        logger.info(f"📝 Processing file: {file_path}")
         start_time = time.time()
 
-        self.config: AppConfig = load_config(config_path)
-        if output_dir:
-            self.config.output.dir = output_dir
-        # Override token if provided via CLI
-        if hugging_face_token:
-            self.config.model.hugging_face_token = hugging_face_token
+        try:
+            # Validate input file
+            if not file_path.exists():
+                logger.error(f"❌ File not found: {file_path}")
+                return None
 
-        logger.info(f"📋 Configuration loaded from: {config_path or 'default'}")
-        logger.info(f"📁 Output directory: {self.config.output.dir}")
-        logger.info(f"🤖 Model: {self.config.model.name}")
-        logger.info(f"⚙️  Quantization: {self.config.model.quantization}")
+            # Check file size limits
+            file_size_mb = file_path.stat().st_size / (1024 * 1024)
+            max_size_mb = self.generation_config.get("max_file_size_mb", 10)
 
-        # Initialize caches
-        self.generation_cache = None
-        if self.config.cache.enabled and self.config.cache.generation_cache:
-            logger.info("💾 Initializing generation cache...")
-            self.generation_cache = GenerationCache(
-                cache_dir=self.config.cache.cache_dir,
-                max_size_mb=self.config.cache.max_cache_size_mb,
+            if file_size_mb > max_size_mb:
+                logger.warning(
+                    f"⚠️  File too large ({file_size_mb:.1f}MB > {max_size_mb}MB): "
+                    f"{file_path}"
+                )
+                return None
+
+            # Check cache first
+            cache_key = self._get_cache_key(file_path)
+            cached_result = self.cache_manager.get_cached_result(cache_key)
+
+            if cached_result:
+                logger.info("💾 Using cached result")
+                return cached_result.get("output_file")
+
+            # Read source code
+            logger.info("📖 Reading source code...")
+            try:
+                with open(file_path, "r", encoding="utf-8") as f:
+                    code_content = f.read()
+            except UnicodeDecodeError:
+                logger.warning("⚠️  UTF-8 decode failed, trying with error handling...")
+                with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
+                    code_content = f.read()
+
+            logger.info(f"📊 Code length: {len(code_content)} characters")
+
+            # Generate documentation
+            logger.info("🔄 Generating documentation...")
+            doc_start = time.time()
+            documentation = self.model.generate_documentation(
+                code_content, str(file_path)
             )
-            stats = self.generation_cache.get_stats()
-            logger.info(f"✅ Generation cache enabled: {stats}")
+            doc_elapsed = time.time() - doc_start
+            logger.info(f"✅ Documentation generated in {doc_elapsed:.2f} seconds")
 
-        logger.info("🤖 Initializing AI model...")
-        self.ai_model: AIModel = self._init_model()
+            # Generate architecture description if requested
+            architecture_description = ""
+            if self.output_config.get("include_architecture", True):
+                logger.info("🏗️  Generating architecture description...")
+                arch_start = time.time()
+                architecture_description = self.model.generate_architecture_description(
+                    code_content, str(file_path)
+                )
+                arch_elapsed = time.time() - arch_start
+                logger.info(
+                    f"✅ Architecture description generated in "
+                    f"{arch_elapsed:.2f} seconds"
+                )
 
-        logger.info("📝 Initializing template loader...")
-        self.template_loader = TemplateLoader()
+            # Prepare template context
+            context = self._create_template_context(
+                file_path, code_content, documentation, architecture_description
+            )
 
-        init_time = time.time() - start_time
-        logger.info(f"✅ CoreProcessor initialized in {init_time:.2f} seconds")
+            # Render template
+            logger.info("📄 Rendering documentation template...")
+            rendered_doc = self.template_manager.render_documentation(context)
 
-    def _init_model(self) -> AIModel:
-        model_config = self.config.model
+            # Save output
+            output_path = self._save_documentation(file_path, rendered_doc)
 
-        # Create a cache key based on model configuration
-        cache_key = (
-            model_config.name,
-            model_config.quantization,
-            model_config.hugging_face_token,
+            # Prepare result for caching
+            result = {
+                "input_file": str(file_path),
+                "output_file": output_path,
+                "documentation": documentation,
+                "architecture_description": architecture_description,
+                "context": context,
+                "generation_time": time.time() - start_time,
+                "cache_key": cache_key,
+            }
+
+            # Cache result
+            self.cache_manager.cache_result(cache_key, result)
+
+            total_elapsed = time.time() - start_time
+            logger.info(f"🎉 File processing complete in {total_elapsed:.2f} seconds")
+            logger.info(f"💾 Saved to: {output_path}")
+
+            return output_path
+
+        except Exception as e:
+            logger.error(f"❌ Failed to process {file_path}: {str(e)}")
+            return None
+
+    def process_directory(self, dir_path: Path) -> List[str]:
+        """
+        Process all files in a directory and generate documentation.
+
+        Args:
+            dir_path: Path to the source directory
+
+        Returns:
+            List of paths to generated documentation files
+        """
+        logger.info(f"📁 Processing directory: {dir_path}")
+        start_time = time.time()
+
+        if not dir_path.is_dir():
+            logger.error(f"❌ Not a directory: {dir_path}")
+            return []
+
+        # Find source files
+        source_files = self._find_source_files(dir_path)
+
+        if not source_files:
+            logger.warning(f"⚠️  No source files found in {dir_path}")
+            return []
+
+        logger.info(f"🔍 Found {len(source_files)} files to process")
+
+        # Process files
+        results = []
+        successful = 0
+        failed = 0
+
+        for file_path in source_files:
+            try:
+                result = self.process_file(file_path)
+                if result:
+                    results.append(result)
+                    successful += 1
+                else:
+                    failed += 1
+            except Exception as e:
+                logger.error(f"❌ Failed to process {file_path}: {str(e)}")
+                failed += 1
+
+        # Generate directory summary if enabled
+        if self.output_config.get("create_subdirs", True) and results:
+            summary_path = self._generate_directory_summary(dir_path, results)
+            if summary_path:
+                results.append(summary_path)
+
+        total_elapsed = time.time() - start_time
+        logger.info(f"🎉 Directory processing complete in {total_elapsed:.2f} seconds")
+        logger.info(f"📊 Results: {successful} successful, {failed} failed")
+
+        return results
+
+    def _find_source_files(self, dir_path: Path) -> List[Path]:
+        """Find source files in directory based on configured patterns."""
+        file_patterns = self.generation_config.get("file_patterns", ["*.py"])
+        skip_test_files = self.generation_config.get("skip_test_files", False)
+        skip_generated_files = self.generation_config.get("skip_generated_files", True)
+
+        source_files = []
+
+        for pattern in file_patterns:
+            files = list(dir_path.rglob(pattern))
+
+            for file_path in files:
+                # Skip if not a file
+                if not file_path.is_file():
+                    continue
+
+                # Skip test files if configured
+                if skip_test_files and self._is_test_file(file_path):
+                    continue
+
+                # Skip generated files if configured
+                if skip_generated_files and self._is_generated_file(file_path):
+                    continue
+
+                source_files.append(file_path)
+
+        # Remove duplicates and sort
+        source_files = sorted(set(source_files))
+
+        return source_files
+
+    def _is_test_file(self, file_path: Path) -> bool:
+        """Check if file appears to be a test file."""
+        name_lower = file_path.name.lower()
+        return (
+            name_lower.startswith("test_")
+            or name_lower.endswith("_test.py")
+            or "test" in file_path.parts
         )
 
-        # Try to get cached model if session caching is enabled
-        if model_config.session_cache:
-            cached_model = _model_cache.get_model(model_config.name, cache_key)
-            if cached_model is not None:
-                print("Using cached model from session")
-                # Update the generation cache reference
-                if hasattr(cached_model, "generation_cache"):
-                    cached_model.generation_cache = self.generation_cache
-                return cached_model
+    def _is_generated_file(self, file_path: Path) -> bool:
+        """Check if file appears to be generated."""
+        name_lower = file_path.name.lower()
+        return (
+            name_lower.endswith(".generated.py")
+            or name_lower.endswith(".pb2.py")
+            or "__pycache__" in file_path.parts
+            or ".git" in file_path.parts
+        )
 
-        # Create new model instance
-        if MMADA_AVAILABLE:
-            model = MMaDANativeModel(
-                model_name=model_config.name,
-                hugging_face_token=model_config.hugging_face_token,
-                quantization=model_config.quantization,
-                generation_cache=self.generation_cache,
-            )
+    def _get_cache_key(self, file_path: Path) -> str:
+        """Generate cache key for file."""
+        return self.cache_manager.get_cache_key(
+            str(file_path), self.output_config.get("include_architecture", True)
+        )
+
+    def _create_template_context(
+        self,
+        file_path: Path,
+        code_content: str,
+        documentation: str,
+        architecture_description: str,
+    ) -> Dict[str, Any]:
+        """Create template context for rendering."""
+        return {
+            "file_path": str(file_path),
+            "file_name": file_path.name,
+            "language": self._detect_language(file_path.suffix),
+            "documentation": documentation,
+            "architecture_description": architecture_description,
+            "include_architecture": self.output_config.get(
+                "include_architecture", True
+            ),
+            "include_code_stats": self.output_config.get("include_code_stats", True),
+            "include_dependencies": self.output_config.get(
+                "include_dependencies", True
+            ),
+            "include_examples": self.output_config.get("include_examples", True),
+            "generation_time": time.strftime("%Y-%m-%d %H:%M:%S"),
+            "model_info": self.model.get_model_info(),
+            "code_stats": {
+                "lines": len(code_content.splitlines()),
+                "characters": len(code_content),
+                "size_kb": round(len(code_content.encode("utf-8")) / 1024, 2),
+            },
+            "config": {
+                "detail_level": self.generation_config.get("detail_level", "medium"),
+                "author": self.config.get("templates", {}).get("author", ""),
+                "organization": self.config.get("templates", {}).get(
+                    "organization", ""
+                ),
+                "project_name": self.config.get("templates", {}).get(
+                    "project_name", ""
+                ),
+                "version": self.config.get("templates", {}).get("version", "1.0.0"),
+            },
+        }
+
+    def _save_documentation(self, input_file: Path, content: str) -> str:
+        """Save generated documentation to file."""
+        output_dir = Path(self.output_config.get("dir", "output"))
+        filename_template = self.output_config.get(
+            "filename_template", "{name}_documentation.md"
+        )
+
+        # Create output directory
+        output_dir.mkdir(parents=True, exist_ok=True)
+
+        # Generate output filename
+        output_filename = filename_template.format(
+            name=input_file.stem, original_filename=input_file.name
+        )
+
+        # Preserve directory structure if configured
+        if self.output_config.get("preserve_structure", True):
+            # Calculate relative path from current working directory
+            try:
+                rel_path = input_file.relative_to(Path.cwd())
+                output_subdir = output_dir / rel_path.parent
+                output_subdir.mkdir(parents=True, exist_ok=True)
+                output_path = output_subdir / output_filename
+            except ValueError:
+                # File is not relative to cwd, use flat structure
+                output_path = output_dir / output_filename
         else:
-            # Fallback to the old MMaDAModel implementation
-            model = MMaDAModel(
-                model_name=model_config.name,
-                hugging_face_token=model_config.hugging_face_token,
-            )
-            # Add generation cache to fallback model if it supports it
-            if hasattr(model, "generation_cache"):
-                model.generation_cache = self.generation_cache
+            output_path = output_dir / output_filename
 
-        # Cache the model if session caching is enabled
-        if model_config.session_cache:
-            _model_cache.set_model(model_config.name, model, cache_key)
-            print("Model cached for session")
+        # Save content
+        with open(output_path, "w", encoding="utf-8") as f:
+            f.write(content)
 
-        return model
+        return str(output_path)
 
-    def process(self, path: Path) -> list[str]:
-        """
-        Processes a file or directory to generate documentation.
-        Returns a list of paths to the generated documentation files.
-        """
-        if path.is_dir():
-            return self.process_directory(path)
-        else:
-            return [self.process_file(path)]
+    def _generate_directory_summary(
+        self, dir_path: Path, result_files: List[str]
+    ) -> Optional[str]:
+        """Generate a summary document for the directory."""
+        try:
+            output_dir = Path(self.output_config.get("dir", "output"))
+            summary_filename = f"{dir_path.name}_summary.md"
+            summary_path = output_dir / summary_filename
 
-    def process_file(self, file_path: Path, generate_diagram: bool = False) -> str:
-        """
-        Processes a single source code file to generate documentation or a
-        diagram.
-        """
-        if generate_diagram:
-            return self.process_for_diagram(file_path)
+            # Create summary content
+            summary_content = f"""# Documentation Summary: {dir_path.name}
 
-        # 1. Read the source code
-        code = file_path.read_text()
+Generated on: {time.strftime("%Y-%m-%d %H:%M:%S")}
 
-        # 2. Load templates
-        doc_template = self.template_loader.load_documentation()
-        style_guide = self.template_loader.load_style_guide()
+## Processed Files
 
-        # 3. Analyze the code
-        analysis_result = self.ai_model.analyze_code(code)
-
-        # 4. Generate documentation content (placeholder)
-        # In the future, this will use a more sophisticated prompt
-        prompt = f"""{doc_template}
-
-Style Guide:
-{style_guide}
-
-Code:
-```
-{code}
-```
-
-Analysis:
-{analysis_result}
 """
-        generated_doc = self.ai_model.generate_text(prompt)
 
-        # 5. Save the documentation
-        output_path = self.config.output.dir / f"{file_path.stem}_doc.md"
-        output_path.parent.mkdir(parents=True, exist_ok=True)
-        output_path.write_text(generated_doc)
+            for result_file in result_files:
+                rel_path = Path(result_file).name
+                summary_content += f"- [{rel_path}](./{rel_path})\n"
 
-        return str(output_path)
+            summary_content += f"""
 
-    def process_for_diagram(self, file_path: Path) -> str:
-        """
-        Processes a single source code file to generate a diagram.
-        """
-        # 1. Read the source code
-        code = file_path.read_text()
+## Statistics
 
-        # 2. Generate the diagram
-        diagram = self.ai_model.generate_diagram(code)
+- Total files processed: {len(result_files)}
+- Generated documentation files: {len(result_files)}
 
-        # 3. Save the diagram
-        output_path = self.config.output.dir / f"{file_path.stem}_diagram.md"
-        output_path.parent.mkdir(parents=True, exist_ok=True)
-        output_path.write_text(f"```mermaid\n{diagram}\n```")
+## Model Information
 
-        return str(output_path)
+- Model: {self.model.get_model_info()['model_path']}
+- Backend: {self.model.get_model_info()['backend']}
+- Platform: {self.model.get_model_info()['platform']}
 
-    def process_directory(self, dir_path: Path) -> list[str]:
-        """
-        Processes all supported files in a directory recursively.
-        """
-        generated_files = []
-        supported_extensions = [".py", ".png", ".jpg", ".jpeg"]
-        for file_path in dir_path.rglob("*"):
-            if file_path.suffix in supported_extensions:
-                click.echo(f"Processing {file_path}...")
-                if file_path.suffix == ".py":
-                    generated_file = self.process_file(file_path)
-                else:
-                    generated_file = self.process_image(file_path)
-                generated_files.append(generated_file)
-        return generated_files
+---
 
-    def process_image(self, image_path: Path) -> str:
-        """
-        Processes an image file to generate documentation.
-        """
-        # 1. Analyze the image
-        analysis_result = self.ai_model.analyze_image(image_path)
-
-        # 2. Load templates
-        doc_template = self.template_loader.load_documentation()
-        style_guide = self.template_loader.load_style_guide()
-
-        # 3. Generate documentation content
-        prompt = f"""{doc_template}
-
-Style Guide:
-{style_guide}
-
-Image Analysis:
-{analysis_result}
+*Generated by DocGenAI*
 """
-        generated_doc = self.ai_model.generate_text(prompt)
 
-        # 4. Save the documentation
-        output_path = self.config.output.dir / f"{image_path.stem}_doc.md"
-        output_path.parent.mkdir(parents=True, exist_ok=True)
-        output_path.write_text(generated_doc)
+            # Save summary
+            with open(summary_path, "w", encoding="utf-8") as f:
+                f.write(summary_content)
 
-        return str(output_path)
+            logger.info(f"📋 Directory summary saved: {summary_path}")
+            return str(summary_path)
+
+        except Exception as e:
+            logger.error(f"❌ Failed to generate directory summary: {str(e)}")
+            return None
+
+    def _detect_language(self, file_extension: str) -> str:
+        """Detect programming language from file extension."""
+        language_map = {
+            ".py": "python",
+            ".js": "javascript",
+            ".ts": "typescript",
+            ".jsx": "jsx",
+            ".tsx": "tsx",
+            ".cpp": "cpp",
+            ".cc": "cpp",
+            ".cxx": "cpp",
+            ".c": "c",
+            ".h": "c",
+            ".hpp": "cpp",
+            ".java": "java",
+            ".go": "go",
+            ".rs": "rust",
+            ".rb": "ruby",
+            ".php": "php",
+            ".cs": "csharp",
+            ".swift": "swift",
+            ".kt": "kotlin",
+            ".scala": "scala",
+            ".r": "r",
+            ".R": "r",
+        }
+        return language_map.get(file_extension.lower(), "text")
+
+    def get_cache_stats(self) -> Dict[str, Any]:
+        """Get cache statistics."""
+        return self.cache_manager.get_stats()
+
+    def clear_cache(self):
+        """Clear all cached data."""
+        self.cache_manager.clear_cache()
+
+
+# Convenience functions for backward compatibility
+def generate_documentation(
+    file_path: str,
+    output_dir: str = "output",
+    config: Optional[Dict[str, Any]] = None,
+    include_architecture: bool = True,
+    verbose: bool = False,
+) -> Dict[str, Any]:
+    """
+    Generate documentation for a single file (convenience function).
+
+    Args:
+        file_path: Path to source file
+        output_dir: Output directory
+        config: Configuration dictionary
+        include_architecture: Include architecture analysis
+        verbose: Enable verbose logging
+
+    Returns:
+        Generation result dictionary
+    """
+    from .models import create_model
+
+    if config is None:
+        from .config import load_config
+
+        config = load_config()
+
+    # Override output directory
+    config["output"]["dir"] = output_dir
+    config["output"]["include_architecture"] = include_architecture
+
+    # Create model and generator
+    model = create_model(config)
+    generator = DocumentationGenerator(model, config)
+
+    # Process file
+    result_path = generator.process_file(Path(file_path))
+
+    return {"output_file": result_path, "success": result_path is not None}
+
+
+def generate_directory_documentation(
+    dir_path: str,
+    output_dir: str = "output",
+    config: Optional[Dict[str, Any]] = None,
+    include_architecture: bool = True,
+    file_patterns: Optional[List[str]] = None,
+    verbose: bool = False,
+) -> Dict[str, Any]:
+    """
+    Generate documentation for a directory (convenience function).
+
+    Args:
+        dir_path: Path to source directory
+        output_dir: Output directory
+        config: Configuration dictionary
+        include_architecture: Include architecture analysis
+        file_patterns: File patterns to process
+        verbose: Enable verbose logging
+
+    Returns:
+        Generation result dictionary
+    """
+    from .models import create_model
+
+    if config is None:
+        from .config import load_config
+
+        config = load_config()
+
+    # Override configuration
+    config["output"]["dir"] = output_dir
+    config["output"]["include_architecture"] = include_architecture
+    if file_patterns:
+        config["generation"]["file_patterns"] = file_patterns
+
+    # Create model and generator
+    model = create_model(config)
+    generator = DocumentationGenerator(model, config)
+
+    # Process directory
+    results = generator.process_directory(Path(dir_path))
+
+    return {
+        "output_files": results,
+        "files_processed": len(results),
+        "success": len(results) > 0,
+    }

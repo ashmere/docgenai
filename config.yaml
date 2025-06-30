@@ -1,47 +1,243 @@
-# Default configuration for DocGenAI
+# DocGenAI Configuration File
+# Comprehensive configuration for code documentation generation
 
-# AI model settings
+# AI Model Configuration
 model:
-  # The name of the Hugging Face model to use.
-  name: "Gen-Verse/MMaDA-8B-Base"
-  # Note: Set your Hugging Face token via the HUGGING_FACE_TOKEN environment variable
-  # Do not put tokens in this config file as they may be accidentally committed to git
+  # Model selection (platform-aware)
+  # macOS: Uses MLX-optimized model automatically
+  # Linux/Windows: Uses standard transformers model
 
-  # Quantization options: "none", "8bit", "4bit"
-  # 8bit: 2x faster loading, ~95-98% quality (recommended)
-  # 4bit: 4x faster loading, ~90-95% quality
-  # none: Full precision, slower loading, best quality
-  quantization: "4bit"
+  # Model names (automatically selected based on platform)
+  mlx_model: "mlx-community/DeepSeek-Coder-V2-Lite-Instruct-8bit"     # macOS (Apple Silicon)
+  transformers_model: "deepseek-ai/DeepSeek-Coder-V2-Lite-Instruct"   # Linux/Windows
 
-  # Keep model in memory between files (faster for multiple files)
-  session_cache: true
+  # Generation parameters
+  temperature: 0.7          # Creativity level (0.0-2.0)
+  max_tokens: 2048          # Maximum tokens to generate
+  top_p: 0.8               # Nucleus sampling parameter
+  top_k: 50                # Top-k sampling parameter
+  do_sample: true          # Enable sampling vs greedy decoding
 
-# Caching settings
+  # Quantization settings (non-MLX platforms)
+  quantization: "4bit"     # Options: "none", "8bit", "4bit"
+
+  # Model caching
+  session_cache: true      # Keep model in memory between generations
+  cache_model_files: true  # Cache downloaded model files
+
+  # Hardware optimization
+  device_map: "auto"       # Automatic device mapping for multi-GPU
+  torch_dtype: "auto"      # Automatic precision selection
+  trust_remote_code: true  # Required for DeepSeek models
+
+# Caching Configuration
 cache:
-  # Enable all caching features
-  enabled: true
+  enabled: true                    # Enable all caching features
+  generation_cache: true           # Cache generation results
+  model_cache: true               # Cache model instances
 
-  # Cache generation results to avoid re-generating for same content
-  generation_cache: true
+  # Cache directories
+  cache_dir: ".cache/docgenai"     # Main cache directory
+  model_cache_dir: ".cache/models" # Model files cache
 
-  # Directory to store cache files
-  cache_dir: ".cache/docgenai"
+  # Cache limits
+  max_cache_size_mb: 2000         # Maximum total cache size
+  max_generation_cache_mb: 500    # Max size for generation cache
+  max_model_cache_mb: 1500        # Max size for model cache
 
-  # Maximum cache size in MB (old entries deleted when exceeded)
-  max_cache_size_mb: 1000
+  # Cache TTL (time-to-live)
+  generation_ttl_hours: 24        # How long to keep generation cache
+  model_ttl_hours: 168           # How long to keep model cache (1 week)
 
-# Output settings
+  # Cache cleanup
+  auto_cleanup: true              # Automatically clean old cache
+  cleanup_on_startup: false      # Clean cache on application start
+
+# Output Configuration
 output:
-  # The directory where generated documentation will be saved.
-  dir: "output"
-  # The default filename for the generated markdown file.
-  filename_template: "{original_filename}_docs.md"
+  # Output directory and file naming
+  dir: "output"                           # Default output directory
+  filename_template: "{name}_documentation.md"  # Output filename pattern
 
-# Template settings
+  # Content options
+  include_architecture: true             # Include architecture analysis
+  include_code_stats: true              # Include code statistics
+  include_dependencies: true            # Include dependency analysis
+  include_examples: true                # Include usage examples
+  include_diagrams: false               # Include Mermaid diagrams (future)
+
+  # File organization
+  create_subdirs: true                  # Create subdirectories for organization
+  preserve_structure: true             # Preserve source directory structure
+
+  # Format options
+  markdown_style: "github"             # Markdown flavor
+  code_block_language: "auto"          # Auto-detect code language
+  table_format: "github"               # Table format style
+
+# Template Configuration
 templates:
-  # Path to the directory containing documentation templates.
-  dir: "src/docgenai/templates"
-  # The default template to use for generating documentation.
-  doc_template: "default_doc_template.md"
-  # A style guide to be injected into the AI prompt.
-  style_guide: "default_style_guide.md"
+  # Template directories and files
+  dir: "src/docgenai/templates"              # Template directory
+  doc_template: "default_doc_template.md"    # Main documentation template
+  style_guide: "default_style_guide.md"     # Style guide template
+  summary_template: "directory_summary.md"   # Directory summary template
+
+  # Template customization
+  custom_templates_dir: "templates"         # User custom templates
+  allow_custom_templates: true              # Enable custom templates
+
+  # Template variables
+  author: ""                               # Default author name
+  organization: ""                         # Default organization
+  project_name: ""                        # Default project name
+  version: "1.0.0"                        # Default version
+
+# Generation Configuration
+generation:
+  # File processing
+  file_patterns:
+    - "*.py"      # Python
+    - "*.js"      # JavaScript
+    - "*.ts"      # TypeScript
+    - "*.jsx"     # React JSX
+    - "*.tsx"     # React TypeScript
+    - "*.cpp"     # C++
+    - "*.cc"      # C++
+    - "*.cxx"     # C++
+    - "*.c"       # C
+    - "*.h"       # C/C++ headers
+    - "*.hpp"     # C++ headers
+    - "*.java"    # Java
+    - "*.go"      # Go
+    - "*.rs"      # Rust
+    - "*.rb"      # Ruby
+    - "*.php"     # PHP
+    - "*.cs"      # C#
+    - "*.swift"   # Swift
+    - "*.kt"      # Kotlin
+    - "*.scala"   # Scala
+    - "*.r"       # R
+    - "*.R"       # R
+
+  # Processing options
+  max_file_size_mb: 10                # Maximum file size to process
+  skip_binary_files: true             # Skip binary files
+  skip_generated_files: true          # Skip generated files
+  skip_test_files: false              # Process test files
+
+  # Parallel processing
+  max_workers: 4                      # Maximum parallel workers
+  batch_size: 5                       # Files per batch
+
+  # Content analysis
+  analyze_imports: true               # Analyze import statements
+  analyze_functions: true             # Analyze function definitions
+  analyze_classes: true               # Analyze class definitions
+  analyze_complexity: true            # Analyze code complexity
+
+  # Documentation depth
+  detail_level: "medium"              # Options: "brief", "medium", "detailed"
+  include_private_methods: false      # Document private methods
+  include_internal_classes: false    # Document internal classes
+
+# Logging Configuration
+logging:
+  # Log levels: DEBUG, INFO, WARNING, ERROR, CRITICAL
+  level: "INFO"                       # Default log level
+  verbose_level: "DEBUG"              # Log level when --verbose is used
+
+  # Log formatting
+  format: "%(message)s"               # Simple format with emojis
+  verbose_format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+
+  # Log output
+  console: true                       # Log to console
+  file: false                         # Log to file
+  log_file: "logs/docgenai.log"      # Log file path
+
+  # Log rotation
+  max_log_size_mb: 10                # Maximum log file size
+  backup_count: 3                    # Number of backup log files
+
+# Environment Variables
+# These can be set as environment variables with DOCGENAI_ prefix
+# Example: DOCGENAI_MODEL__TEMPERATURE=0.8
+# Example: DOCGENAI_CACHE__ENABLED=false
+# Example: DOCGENAI_OUTPUT__DIR=/custom/output
+
+# Security Configuration
+security:
+  # Model security
+  allow_remote_code: true            # Allow remote code execution in models
+  verify_ssl: true                   # Verify SSL certificates
+
+  # File security
+  restrict_file_access: false        # Restrict file access to specific directories
+  allowed_directories: []            # List of allowed directories (if restricted)
+
+  # Network security
+  proxy_url: ""                      # HTTP proxy URL
+  timeout_seconds: 300               # Network timeout
+
+# Performance Configuration
+performance:
+  # Memory management
+  max_memory_usage_gb: 16           # Maximum memory usage
+  memory_cleanup_threshold: 0.8     # Memory cleanup threshold
+
+  # Processing limits
+  max_concurrent_files: 10          # Maximum files processed concurrently
+  processing_timeout_minutes: 30    # Timeout for single file processing
+
+  # Model optimization
+  use_cpu_offload: false            # Offload model to CPU when not in use
+  use_disk_offload: false           # Offload model to disk when not in use
+  optimize_for_speed: true          # Optimize for speed vs quality
+
+  # Hardware detection
+  auto_detect_gpu: true             # Automatically detect and use GPU
+  prefer_gpu: true                  # Prefer GPU over CPU when available
+
+# Integration Configuration
+integrations:
+  # Git integration
+  git:
+    enabled: true                   # Enable git integration
+    include_commit_info: true       # Include commit information
+    include_branch_info: true       # Include branch information
+    include_author_info: false      # Include author information
+
+  # IDE integration
+  vscode:
+    enabled: false                  # Enable VS Code integration
+    config_path: ".vscode/settings.json"
+
+  # CI/CD integration
+  github_actions:
+    enabled: false                  # Enable GitHub Actions integration
+    workflow_path: ".github/workflows/docs.yml"
+
+  # Documentation platforms
+  gitbook:
+    enabled: false                  # Enable GitBook integration
+    api_key: ""                     # GitBook API key (use env var)
+
+  confluence:
+    enabled: false                  # Enable Confluence integration
+    base_url: ""                    # Confluence base URL
+    api_key: ""                     # Confluence API key (use env var)
+
+# Experimental Features
+experimental:
+  # Future features (not yet implemented)
+  interactive_mode: false           # Interactive documentation tuning
+  ai_suggestions: false             # AI-powered improvement suggestions
+  code_refactoring_hints: false     # Suggest code improvements
+  documentation_scoring: false      # Score documentation quality
+  auto_update_docs: false          # Automatically update outdated docs
+
+  # Advanced AI features
+  multi_model_consensus: false      # Use multiple models for consensus
+  custom_prompt_engineering: false  # Allow custom prompt templates
+  domain_specific_training: false   # Domain-specific model fine-tuning
