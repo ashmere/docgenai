@@ -418,9 +418,6 @@ poetry run docgenai <command> --help
 
 See [LICENSE](LICENSE) file for details.
 
-## Changelog
-
-- **v0.2.0 (deepseek-refactor)**: Complete migration to DeepSeek-Coder-V2-Lite with platform optimization
-- **v0.1.0 (MMaDA)**: Initial implementation with MMaDA model
-
 For detailed development information, see [docs/developer.md](docs/developer.md).
+
+For version history and changes, see [CHANGELOG.md](CHANGELOG.md).
