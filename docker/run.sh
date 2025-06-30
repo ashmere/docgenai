@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # DocGenAI Docker Runner Script
-# This script makes it easy to run DocGenAI with proper Docker configuration
+# Optimized for DeepSeek-Coder-V2-Lite implementation
 
 set -e
 
@@ -10,38 +10,59 @@ RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
+CYAN='\033[0;36m'
 NC='\033[0m' # No Color
 
 # Default values
-MEMORY="8g"
+MEMORY="12g"  # Increased for DeepSeek models
 CPUS="4"
 IMAGE_NAME="docgenai"
 VERBOSE=false
+BUILD_IMAGE=false
 
 # Help function
 show_help() {
-    echo "DocGenAI Docker Runner"
+    echo -e "${CYAN}DocGenAI Docker Runner${NC}"
+    echo -e "${CYAN}DeepSeek-Coder-V2-Lite Implementation${NC}"
     echo ""
     echo "Usage: $0 [OPTIONS] COMMAND [ARGS...]"
     echo ""
-    echo "Options:"
+    echo -e "${YELLOW}Options:${NC}"
     echo "  -h, --help     Show this help message"
     echo "  -v, --verbose  Enable verbose logging"
-    echo "  -m, --memory   Set memory limit (default: 8g)"
+    echo "  -m, --memory   Set memory limit (default: 12g)"
     echo "  -c, --cpus     Set CPU limit (default: 4)"
     echo "  --build        Build the Docker image first"
     echo ""
-    echo "Commands:"
-    echo "  generate FILE/DIR  Generate documentation"
-    echo "  diagram FILE       Generate diagram for file"
-    echo "  shell             Start interactive shell"
-    echo "  help              Show DocGenAI help"
+    echo -e "${YELLOW}Commands:${NC}"
+    echo "  generate FILE/DIR     Generate documentation for files or directories"
+    echo "  cache                 Manage caches (show stats, clear caches)"
+    echo "  info                  Show model and configuration information"
+    echo "  init                  Create default configuration file"
+    echo "  test FILE             Test documentation generation on a single file"
+    echo "  shell                 Start interactive shell in container"
+    echo "  help                  Show DocGenAI help"
     echo ""
-    echo "Examples:"
+    echo -e "${YELLOW}Examples:${NC}"
     echo "  $0 generate src/models.py"
-    echo "  $0 diagram src/models.py"
-    echo "  $0 --verbose generate src/"
+    echo "  $0 generate src/ --output-dir docs/"
+    echo "  $0 test src/models.py"
+    echo "  $0 cache --clear-output-cache"
+    echo "  $0 info"
+    echo "  $0 --verbose --memory 16g generate src/"
     echo "  $0 shell"
+    echo ""
+    echo -e "${YELLOW}Cache Management:${NC}"
+    echo "  $0 cache                    # Show cache statistics"
+    echo "  $0 cache --clear            # Clear all caches"
+    echo "  $0 cache --clear-model-cache     # Clear model cache only"
+    echo "  $0 cache --clear-output-cache    # Clear output cache only"
+    echo ""
+    echo -e "${YELLOW}Performance Notes:${NC}"
+    echo "  • First run downloads DeepSeek model (~4-8GB)"
+    echo "  • Subsequent runs use cached model (much faster)"
+    echo "  • Recommended: 12GB+ memory, 4+ CPUs"
+    echo "  • Uses 4-bit quantization by default for efficiency"
 }
 
 # Logging functions
@@ -80,7 +101,7 @@ check_image() {
 
 # Build Docker image
 build_image() {
-    log_info "Building DocGenAI Docker image..."
+    log_info "Building DocGenAI Docker image for DeepSeek-Coder-V2-Lite..."
     if docker build -f docker/Dockerfile -t $IMAGE_NAME .; then
         log_success "Docker image built successfully"
     else
@@ -89,12 +110,19 @@ build_image() {
     fi
 }
 
-# Setup cache directory
+# Setup cache directories
 setup_cache() {
-    local cache_dir="$HOME/.cache/huggingface"
-    if [ ! -d "$cache_dir" ]; then
-        log_info "Creating cache directory: $cache_dir"
-        mkdir -p "$cache_dir"
+    local model_cache_dir="$HOME/.cache/models"
+    local output_cache_dir="$(pwd)/.docgenai_cache"
+
+    if [ ! -d "$model_cache_dir" ]; then
+        log_info "Creating model cache directory: $model_cache_dir"
+        mkdir -p "$model_cache_dir"
+    fi
+
+    if [ ! -d "$output_cache_dir" ]; then
+        log_info "Creating output cache directory: $output_cache_dir"
+        mkdir -p "$output_cache_dir"
     fi
 }
 
@@ -107,6 +135,23 @@ setup_output() {
     fi
 }
 
+# Get base Docker arguments
+get_docker_args() {
+    local docker_args=(
+        "--rm"
+        "--memory=$MEMORY"
+        "--cpus=$CPUS"
+        "-v" "$HOME/.cache/models:/app/.cache/models"
+        "-v" "$(pwd)/.docgenai_cache:/app/.docgenai_cache"
+        "-v" "$(pwd)/output:/app/output"
+    )
+
+    # Add current directory mount for relative paths
+    docker_args+=("-v" "$(pwd):/app/workspace")
+
+    echo "${docker_args[@]}"
+}
+
 # Run Docker container
 run_docker() {
     local cmd="$1"
@@ -115,13 +160,8 @@ run_docker() {
     setup_cache
     setup_output
 
-    local docker_args=(
-        "--rm"
-        "--memory=$MEMORY"
-        "--cpus=$CPUS"
-        "-v" "$HOME/.cache/huggingface:/app/.cache/huggingface"
-        "-v" "$(pwd)/output:/app/output"
-    )
+    local docker_args
+    IFS=' ' read -ra docker_args <<< "$(get_docker_args)"
 
     # Add verbose flag if requested
     local docgenai_args=()
@@ -139,48 +179,57 @@ run_docker() {
             local target="$1"
             shift
 
-            # Mount the target if it's outside the current directory
-            if [[ "$target" = /* ]]; then
-                docker_args+=("-v" "$target:$target")
-            fi
-
             log_info "Generating documentation for: $target"
             docker run "${docker_args[@]}" $IMAGE_NAME \
-                poetry run docgenai "${docgenai_args[@]}" generate "$target" "$@"
+                "${docgenai_args[@]}" generate "$target" "$@"
             ;;
 
-        "diagram")
+        "cache")
+            log_info "Managing DocGenAI cache..."
+            docker run "${docker_args[@]}" $IMAGE_NAME \
+                "${docgenai_args[@]}" cache "$@"
+            ;;
+
+        "info")
+            log_info "Showing DocGenAI information..."
+            docker run "${docker_args[@]}" $IMAGE_NAME \
+                "${docgenai_args[@]}" info "$@"
+            ;;
+
+        "init")
+            log_info "Initializing DocGenAI configuration..."
+            docker run "${docker_args[@]}" $IMAGE_NAME \
+                "${docgenai_args[@]}" init "$@"
+            ;;
+
+        "test")
             if [ $# -eq 0 ]; then
-                log_error "Please specify a file to generate diagram for"
+                log_error "Please specify a file to test documentation generation"
                 exit 1
             fi
 
             local target="$1"
             shift
 
-            # Mount the target if it's outside the current directory
-            if [[ "$target" = /* ]]; then
-                docker_args+=("-v" "$target:$target")
-            fi
-
-            log_info "Generating diagram for: $target"
+            log_info "Testing documentation generation for: $target"
             docker run "${docker_args[@]}" $IMAGE_NAME \
-                poetry run docgenai "${docgenai_args[@]}" generate "$target" --diagram "$@"
+                "${docgenai_args[@]}" test "$target" "$@"
             ;;
 
         "shell")
             log_info "Starting interactive shell..."
             docker run -it "${docker_args[@]}" \
-                -v "$(pwd):/app/workspace" \
-                $IMAGE_NAME bash
+                --entrypoint bash \
+                $IMAGE_NAME
             ;;
 
         "help")
-            docker run --rm $IMAGE_NAME poetry run docgenai --help
+            docker run --rm $IMAGE_NAME --help
             ;;
 
         *)
             log_error "Unknown command: $cmd"
+            echo ""
             show_help
             exit 1
             ;;
@@ -188,8 +237,6 @@ run_docker() {
 }
 
 # Parse arguments
-BUILD_IMAGE=false
-
 while [[ $# -gt 0 ]]; do
     case $1 in
         -h|--help)
@@ -221,12 +268,13 @@ done
 # Check if command provided
 if [ $# -eq 0 ]; then
     log_error "No command provided"
+    echo ""
     show_help
     exit 1
 fi
 
 # Main execution
-log_info "Starting DocGenAI with Docker"
+log_info "Starting DocGenAI with Docker (DeepSeek-Coder-V2-Lite)"
 log_info "Memory limit: $MEMORY, CPU limit: $CPUS"
 
 check_docker
