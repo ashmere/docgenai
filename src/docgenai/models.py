@@ -145,8 +145,11 @@ class DeepSeekCoderModel(AIModel):
 
         try:
             import torch
-            from transformers import (AutoModelForCausalLM, AutoTokenizer,
-                                      BitsAndBytesConfig)
+            from transformers import (
+                AutoModelForCausalLM,
+                AutoTokenizer,
+                BitsAndBytesConfig,
+            )
 
             # Set up quantization config if requested
             quantization_config = None

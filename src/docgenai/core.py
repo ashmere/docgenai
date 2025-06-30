@@ -13,8 +13,12 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from .cache import CacheManager
-from .config import (get_cache_config, get_generation_config, get_model_config,
-                     get_output_config)
+from .config import (
+    get_cache_config,
+    get_generation_config,
+    get_model_config,
+    get_output_config,
+)
 from .models import AIModel
 from .templates import TemplateManager
 
