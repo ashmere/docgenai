@@ -6,6 +6,7 @@ and generating comprehensive documentation using DeepSeek-Coder models
 with platform-aware optimization and comprehensive configuration support.
 """
 
+import fnmatch
 import logging
 import os
 import time
@@ -223,11 +224,73 @@ class DocumentationGenerator:
 
         return results
 
+    def _load_ignore_patterns(self, dir_path: Path) -> List[str]:
+        """Load ignore patterns from .docgenai_ignore file."""
+        ignore_file = dir_path / ".docgenai_ignore"
+        patterns = []
+
+        if ignore_file.exists():
+            try:
+                with open(ignore_file, "r", encoding="utf-8") as f:
+                    for line in f:
+                        line = line.strip()
+                        # Skip empty lines and comments
+                        if line and not line.startswith("#"):
+                            patterns.append(line)
+                logger.info(
+                    f"📋 Loaded {len(patterns)} ignore patterns from {ignore_file}"
+                )
+            except Exception as e:
+                logger.warning(f"⚠️  Failed to read {ignore_file}: {e}")
+
+        return patterns
+
+    def _is_ignored(
+        self, file_path: Path, ignore_patterns: List[str], base_path: Path
+    ) -> bool:
+        """Check if file should be ignored based on patterns."""
+        if not ignore_patterns:
+            return False
+
+        # Get relative path for pattern matching
+        try:
+            rel_path = file_path.relative_to(base_path)
+            rel_path_str = str(rel_path)
+            rel_path_posix = rel_path_str.replace(os.sep, "/")
+
+            for pattern in ignore_patterns:
+                # Convert pattern to use forward slashes for consistency
+                pattern_posix = pattern.replace("\\", "/")
+
+                # Check various forms of the path
+                if (
+                    fnmatch.fnmatch(rel_path_posix, pattern_posix)
+                    or fnmatch.fnmatch(rel_path_str, pattern)
+                    or fnmatch.fnmatch(file_path.name, pattern)
+                    or pattern_posix in rel_path_posix
+                ):
+                    return True
+
+                # Check if any parent directory matches the pattern
+                for parent in rel_path.parents:
+                    parent_str = str(parent).replace(os.sep, "/")
+                    if fnmatch.fnmatch(parent_str, pattern_posix):
+                        return True
+
+        except ValueError:
+            # file_path is not relative to base_path
+            pass
+
+        return False
+
     def _find_source_files(self, dir_path: Path) -> List[Path]:
         """Find source files in directory based on configured patterns."""
         file_patterns = self.generation_config.get("file_patterns", ["*.py"])
         skip_test_files = self.generation_config.get("skip_test_files", False)
         skip_generated_files = self.generation_config.get("skip_generated_files", True)
+
+        # Load ignore patterns from .docgenai_ignore file
+        ignore_patterns = self._load_ignore_patterns(dir_path)
 
         source_files = []
 
@@ -237,6 +300,11 @@ class DocumentationGenerator:
             for file_path in files:
                 # Skip if not a file
                 if not file_path.is_file():
+                    continue
+
+                # Skip if file matches ignore patterns
+                if self._is_ignored(file_path, ignore_patterns, dir_path):
+                    logger.debug(f"🚫 Ignoring file: {file_path}")
                     continue
 
                 # Skip test files if configured

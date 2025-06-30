@@ -222,6 +222,110 @@ class TestDocumentationGenerator(unittest.TestCase):
 
     @patch("docgenai.core.CacheManager")
     @patch("docgenai.core.TemplateManager")
+    def test_ignore_functionality(self, mock_template_manager, mock_cache_manager):
+        """Test .docgenai_ignore file functionality."""
+        generator = DocumentationGenerator(self.mock_model, self.test_config)
+
+        # Test ignore patterns loading
+        with patch("pathlib.Path.exists", return_value=True):
+            with patch(
+                "builtins.open",
+                mock_open(
+                    read_data="""
+# Test ignore file
+__pycache__/
+*.pyc
+temp_*.py
+# Another comment
+tests/
+"""
+                ),
+            ) as mock_file:
+                patterns = generator._load_ignore_patterns(Path("test_dir"))
+                expected_patterns = ["__pycache__/", "*.pyc", "temp_*.py", "tests/"]
+                self.assertEqual(patterns, expected_patterns)
+
+        # Test ignore pattern matching
+        base_path = Path("project")
+        ignore_patterns = ["__pycache__/", "*.pyc", "temp_*.py", "tests/"]
+
+        # Should ignore these files
+        self.assertTrue(
+            generator._is_ignored(
+                Path("project/__pycache__/module.cpython-39.pyc"),
+                ignore_patterns,
+                base_path,
+            )
+        )
+        self.assertTrue(
+            generator._is_ignored(
+                Path("project/module.pyc"), ignore_patterns, base_path
+            )
+        )
+        self.assertTrue(
+            generator._is_ignored(
+                Path("project/temp_file.py"), ignore_patterns, base_path
+            )
+        )
+        self.assertTrue(
+            generator._is_ignored(
+                Path("project/tests/test_module.py"), ignore_patterns, base_path
+            )
+        )
+
+        # Should NOT ignore these files
+        self.assertFalse(
+            generator._is_ignored(Path("project/module.py"), ignore_patterns, base_path)
+        )
+        self.assertFalse(
+            generator._is_ignored(
+                Path("project/src/main.py"), ignore_patterns, base_path
+            )
+        )
+
+    @patch("docgenai.core.CacheManager")
+    @patch("docgenai.core.TemplateManager")
+    def test_find_source_files_with_ignore(
+        self, mock_template_manager, mock_cache_manager
+    ):
+        """Test source file discovery with ignore patterns."""
+        generator = DocumentationGenerator(self.mock_model, self.test_config)
+
+        with patch("pathlib.Path.rglob") as mock_rglob:
+            # Mock file discovery - all files should be under the base directory
+            mock_files = [
+                Path("project/src/module1.py"),
+                Path("project/src/module2.py"),
+                Path("project/src/__init__.py"),  # Should be ignored
+                Path("project/src/__pycache__/module.pyc"),  # Should be ignored
+                Path("project/tests/test_module.py"),  # Should be ignored
+            ]
+            mock_rglob.return_value = mock_files
+
+            # Mock is_file() to return True for all files
+            with patch("pathlib.Path.is_file", return_value=True):
+                # Mock ignore patterns loading
+                with patch.object(
+                    generator, "_load_ignore_patterns"
+                ) as mock_load_ignore:
+                    mock_load_ignore.return_value = [
+                        "__init__.py",
+                        "__pycache__/",
+                        "tests/",
+                    ]
+
+                    files = generator._find_source_files(Path("project"))
+
+                    # Should find only 2 files (module1.py and module2.py)
+                    # Others should be ignored
+                    self.assertEqual(len(files), 2)
+                    file_names = [f.name for f in files]
+                    self.assertIn("module1.py", file_names)
+                    self.assertIn("module2.py", file_names)
+                    self.assertNotIn("__init__.py", file_names)
+
+    @patch("docgenai.core.CacheManager")
+    @patch("docgenai.core.TemplateManager")
     def test_is_test_file(self, mock_template_manager, mock_cache_manager):
         """Test test file detection."""
         generator = DocumentationGenerator(self.mock_model, self.test_config)
