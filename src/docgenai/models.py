@@ -361,7 +361,7 @@ The documentation should include:
 7. **Error Handling**: How errors are handled and common issues
 8. **Performance Considerations**: Any performance notes or optimizations
 
-Please write the documentation in clear, professional Markdown format. Use appropriate code blocks, headers, and formatting.
+Please write the documentation in clear, professional Markdown format. Use appropriate headers and formatting. Do NOT wrap your entire response in a code block.
 
 **File Path**: `{file_path}`
 
@@ -370,7 +370,7 @@ Please write the documentation in clear, professional Markdown format. Use appro
 {code}
 ```
 
-**Documentation**:"""
+Write the documentation directly (no code block wrapper):"""
 
         return self._generate_text(prompt)
 
@@ -403,7 +403,7 @@ Focus on:
 {code}
 ```
 
-**Architecture Analysis**:"""
+Provide the architectural analysis:"""
 
         return self._generate_text(prompt)
 

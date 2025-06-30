@@ -80,8 +80,13 @@ def cli(ctx, config, verbose):
     is_flag=True,
     help="Disable output cache for this run",
 )
+@click.option(
+    "--extended-footer",
+    is_flag=True,
+    help="Use extended footer with detailed file and model information",
+)
 @click.pass_context
-def generate(ctx, path, output_dir, architecture, no_output_cache):
+def generate(ctx, path, output_dir, architecture, no_output_cache, extended_footer):
     """
     Generate comprehensive documentation for code files or directories.
 
@@ -127,6 +132,7 @@ def generate(ctx, path, output_dir, architecture, no_output_cache):
         # Update output directory in config
         generator_config["output"]["dir"] = output_dir
         generator_config["output"]["include_architecture"] = architecture
+        generator_config["templates"]["use_extended_footer"] = extended_footer
 
         generator = DocumentationGenerator(model, generator_config)
 
