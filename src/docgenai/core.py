@@ -9,6 +9,7 @@ with platform-aware optimization and comprehensive configuration support.
 import fnmatch
 import logging
 import os
+import re
 import time
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -19,8 +20,9 @@ from .config import (
     get_generation_config,
     get_model_config,
     get_output_config,
+    load_config,
 )
-from .models import AIModel
+from .models import AIModel, create_model
 from .templates import TemplateManager
 
 logger = logging.getLogger(__name__)
@@ -125,7 +127,9 @@ class DocumentationGenerator:
                 logger.info("🏗️  Generating architecture description...")
                 arch_start = time.time()
                 architecture_description = self.model.generate_architecture_description(
-                    code_content, str(file_path)
+                    code_content,
+                    str(file_path),
+                    include_diagrams=self.output_config.get("include_diagrams", True),
                 )
                 arch_elapsed = time.time() - arch_start
                 logger.info(
@@ -141,6 +145,9 @@ class DocumentationGenerator:
             # Render template
             logger.info("📄 Rendering documentation template...")
             rendered_doc = self.template_manager.render_documentation(context)
+
+            # Clean up formatting issues
+            rendered_doc = clean_documentation_output(rendered_doc)
 
             # Save output
             output_path = self._save_documentation(file_path, rendered_doc)
@@ -601,3 +608,101 @@ def generate_directory_documentation(
         "files_processed": len(results),
         "success": len(results) > 0,
     }
+
+
+def clean_documentation_output(content: str) -> str:
+    """
+    Clean up common formatting issues in generated documentation.
+
+    Args:
+        content: Raw documentation content
+
+    Returns:
+        Cleaned documentation content
+    """
+    # Remove spurious ```text markers
+    content = re.sub(r"```text\s*\n", "\n", content)
+    content = re.sub(r"```text\s*$", "", content, flags=re.MULTILINE)
+
+    # Fix malformed patterns like **Documentation**: followed by ```
+    content = re.sub(r"\*\*Documentation\*\*:\s*\n```\s*\n", "", content)
+
+    # Fix Mermaid syntax issues with quotes in node labels
+    def fix_mermaid_quotes(match):
+        mermaid_content = match.group(1)
+
+        # Simplify node labels by removing quotes and special characters
+        lines = mermaid_content.split("\n")
+        fixed_lines = []
+        for line in lines:
+            if "-->" in line and "[" in line and "]" in line:
+                # Remove all quotes from node labels
+                line = re.sub(r'(\w+)\["([^"]*)"\]', r"\1[\2]", line)
+
+                # Clean up node labels: remove problematic characters and replace spaces
+                def clean_label(match):
+                    label = match.group(2)
+                    # Remove quotes, commas, exclamation marks, etc.
+                    label = re.sub(r'[",!?;:\\]', "", label)
+                    # Replace spaces with underscores
+                    label = label.replace(" ", "_")
+                    # Remove any remaining problematic characters
+                    label = re.sub(r"[^\w_-]", "", label)
+                    return f"{match.group(1)}[{label}]"
+
+                line = re.sub(r"(\w+)\[([^\]]+)\]", clean_label, line)
+            fixed_lines.append(line)
+
+        mermaid_content = "\n".join(fixed_lines)
+        return f"```mermaid\n{mermaid_content}\n```"
+
+    # Apply quote fixes to mermaid blocks
+    content = re.sub(
+        r"```mermaid\s*\n(.*?)\n\s*```", fix_mermaid_quotes, content, flags=re.DOTALL
+    )
+
+    # Fix unclosed code blocks (all types: mermaid, python, bash, etc.)
+    lines = content.split("\n")
+    fixed_lines = []
+    in_code_block = False
+    code_block_type = None
+
+    for i, line in enumerate(lines):
+        # Check if starting a code block
+        if line.strip().startswith("```") and not in_code_block:
+            in_code_block = True
+            code_block_type = line.strip()[3:].strip()  # Get the language after ```
+            fixed_lines.append(line)
+        # Check if ending a code block
+        elif line.strip() == "```" and in_code_block:
+            in_code_block = False
+            code_block_type = None
+            fixed_lines.append(line)
+        # Check if we hit a new section while in a code block
+        elif in_code_block and (
+            line.startswith("##")
+            or line.startswith("**")
+            or line.startswith("---")
+            or (i == len(lines) - 1)
+        ):
+            # Close the code block before the new section
+            fixed_lines.append("```")
+            in_code_block = False
+            code_block_type = None
+            fixed_lines.append(line)
+        else:
+            fixed_lines.append(line)
+
+    # If we're still in a code block at the end, close it
+    if in_code_block:
+        fixed_lines.append("```")
+
+    content = "\n".join(fixed_lines)
+
+    # Remove duplicate empty lines
+    content = re.sub(r"\n\n\n+", "\n\n", content)
+
+    # Remove trailing whitespace
+    content = "\n".join(line.rstrip() for line in content.split("\n"))
+
+    return content

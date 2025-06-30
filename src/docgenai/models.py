@@ -404,6 +404,13 @@ Please write the documentation in clear, professional Markdown format following 
 - Specify language for all code blocks (```python, ```bash, etc.)
 - Do NOT wrap your entire response in a code block
 - Do NOT use duplicate section headings
+- CRITICAL: Every code block MUST be properly closed with ```
+- CRITICAL: Do NOT add ```text markers anywhere in the output
+- CRITICAL: Ensure all code examples are complete and properly formatted
+- FORBIDDEN: Never use ```text anywhere in the response
+- FORBIDDEN: Do not add any text after closing code blocks with ```
+- FORBIDDEN: Do NOT create any Mermaid diagrams in the main documentation
+- FORBIDDEN: Diagrams belong only in the Architecture Analysis section
 
 **File Path**: `{file_path}`
 
@@ -412,7 +419,7 @@ Please write the documentation in clear, professional Markdown format following 
 {code}
 ```
 
-Write the documentation directly (no code block wrapper):"""
+Provide the architectural analysis{(" with Mermaid diagram" if kwargs.get('include_diagrams', True) else "")}:"""
 
         return self._generate_text(prompt)
 
@@ -424,25 +431,98 @@ Write the documentation directly (no code block wrapper):"""
 
         file_extension = Path(file_path).suffix.lower()
         language = self._detect_language(file_extension)
+        include_diagrams = kwargs.get("include_diagrams", True)
+
+        # Base sections for analysis
+        base_sections = """1. **Architectural Patterns**: Design patterns used (MVC, Observer, Factory, etc.)
+2. **Code Organization**: How the code is structured and organized
+3. **Data Flow Analysis**: Detailed description of how data moves through the system"""
+
+        # Add diagram section if enabled
+        if include_diagrams:
+            sections = (
+                base_sections
+                + """
+4. **Data Flow Diagram**: Create a Mermaid flowchart showing the data flow
+5. **Dependencies**: Internal and external dependencies
+6. **Interfaces**: Public APIs and interfaces exposed
+7. **Extensibility**: How the code can be extended or modified
+8. **Design Principles**: SOLID principles, separation of concerns, etc.
+9. **Potential Improvements**: Suggestions for architectural improvements"""
+            )
+        else:
+            sections = (
+                base_sections
+                + """
+4. **Dependencies**: Internal and external dependencies
+5. **Interfaces**: Public APIs and interfaces exposed
+6. **Extensibility**: How the code can be extended or modified
+7. **Design Principles**: SOLID principles, separation of concerns, etc.
+8. **Potential Improvements**: Suggestions for architectural improvements"""
+            )
+
+        # Add Mermaid guidelines if diagrams are enabled
+        mermaid_guidelines = ""
+        if include_diagrams:
+            mermaid_guidelines = """
+
+## CRITICAL MERMAID RULES - FOLLOW EXACTLY OR FAIL
+
+**STEP 1: START YOUR DIAGRAM**
+Write exactly: ```mermaid
+
+**STEP 2: WRITE MAXIMUM 6 NODES**
+Example:
+flowchart TD
+    A[Start] --> B[Process]
+    B --> C[End]
+
+**STEP 3: END YOUR DIAGRAM**
+Write exactly: ```
+DO NOT WRITE ANYTHING ELSE ON THIS LINE
+
+**ABSOLUTE PROHIBITIONS:**
+- NEVER write more than 6 nodes (A, B, C, D, E, F)
+- NEVER write ```text anywhere
+- NEVER write anything after the closing ```
+- NEVER create infinite loops
+- NEVER repeat the same pattern
+
+**CORRECT EXAMPLE:**
+```mermaid
+flowchart TD
+    A[Input] --> B[Process]
+    B --> C[Output]
+```
+
+**WRONG EXAMPLES - DO NOT DO THIS:**
+❌ ```mermaid
+flowchart TD
+    A[Input] --> B[Process]
+```text  ← NEVER DO THIS
+
+❌ Missing closing ```
+
+❌ More than 6 nodes
+
+**IF YOU VIOLATE THESE RULES, THE DIAGRAM WILL BREAK**"""
 
         prompt = f"""You are a software architect analyzing code structure. Provide a detailed architectural analysis of the following {language} code.
 
 Focus on:
 
-1. **Architectural Patterns**: Design patterns used (MVC, Observer, Factory, etc.)
-2. **Code Organization**: How the code is structured and organized
-3. **Data Flow**: How data moves through the system
-4. **Dependencies**: Internal and external dependencies
-5. **Interfaces**: Public APIs and interfaces exposed
-6. **Extensibility**: How the code can be extended or modified
-7. **Design Principles**: SOLID principles, separation of concerns, etc.
-8. **Potential Improvements**: Suggestions for architectural improvements
+{sections}
+{mermaid_guidelines}
 
 Follow markdown formatting rules:
+
 - Use ## headers for main sections, ### for subsections
 - Surround all lists with blank lines before and after
 - Use only single blank lines between sections
 - Avoid duplicate section headings
+- FORBIDDEN: Never use ```text anywhere in the response
+- FORBIDDEN: Do not add any text after closing code blocks with ```
+{("- Place the Mermaid diagram in a proper code block with ```mermaid" if include_diagrams else "")}
 
 **File Path**: `{file_path}`
 
@@ -451,7 +531,7 @@ Follow markdown formatting rules:
 {code}
 ```
 
-Provide the architectural analysis:"""
+Provide the architectural analysis{(" with Mermaid diagram" if include_diagrams else "")}:"""
 
         return self._generate_text(prompt)
 

@@ -68,7 +68,7 @@ def get_default_config() -> Dict[str, Any]:
             "include_code_stats": True,
             "include_dependencies": True,
             "include_examples": True,
-            "include_diagrams": False,
+            "include_diagrams": True,
             "create_subdirs": True,
             "preserve_structure": True,
             "markdown_style": "github",

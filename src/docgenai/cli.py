@@ -76,6 +76,11 @@ def cli(ctx, config, verbose):
     help="Include/exclude architecture analysis",
 )
 @click.option(
+    "--diagrams/--no-diagrams",
+    default=True,
+    help="Include/exclude Mermaid dataflow diagrams in architecture analysis",
+)
+@click.option(
     "--no-output-cache",
     is_flag=True,
     help="Disable output cache for this run",
@@ -106,6 +111,7 @@ def generate(
     path,
     output_dir,
     architecture,
+    diagrams,
     no_output_cache,
     extended_footer,
     check_updates,
@@ -122,6 +128,7 @@ def generate(
         docgenai generate myfile.py
         docgenai generate src/ --output-dir docs
         docgenai generate . --no-architecture
+        docgenai generate src/ --no-diagrams
         docgenai generate src/ --no-output-cache
         docgenai generate src/ --check-updates
         docgenai generate src/ --force-download
@@ -187,6 +194,7 @@ def generate(
         # Update output directory in config
         generator_config["output"]["dir"] = output_dir
         generator_config["output"]["include_architecture"] = architecture
+        generator_config["output"]["include_diagrams"] = diagrams
         generator_config["templates"]["use_extended_footer"] = extended_footer
 
         generator = DocumentationGenerator(model, generator_config)
@@ -279,6 +287,7 @@ def info(ctx):
     click.echo(
         f"   🏗️  Include architecture: {config['output']['include_architecture']}"
     )
+    click.echo(f"   📊 Include diagrams: {config['output']['include_diagrams']}")
     click.echo(f"   📊 Include stats: {config['output']['include_code_stats']}")
 
     # Cache information
