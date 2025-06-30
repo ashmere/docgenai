@@ -5,7 +5,9 @@ MD013:
   code_blocks: false
   tables: false
   links: false
+MD022: false # allow for trail navigation
 MD029: false # ol-prefix gets confused with indented blocks in lists
 MD034: false
+MD036: false # allow for admonitions
 MD041: false # ignore first-line-heading to allow for trail navigation
 MD046: false # allow mixed code blocks due to admonitions requiring indents

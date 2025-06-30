@@ -331,23 +331,101 @@ def load_config(config_path: Optional[str] = None) -> Dict[str, Any]:
 # Default configuration with platform awareness
 model:
   # Platform detection is automatic
-  # macOS: mlx-community/DeepSeek-v3-0324-8bit
-  # Other: deepseek-ai/DeepSeek-V3
+  # macOS: mlx-community/DeepSeek-Coder-V2-Lite-Instruct-8bit
+  # Other: deepseek-ai/DeepSeek-Coder-V2-Lite-Instruct
   temperature: 0.7
   max_tokens: 2048
   top_p: 0.8
 
 cache:
   enabled: true
-  directory: ".docgenai_cache"
-  max_size_mb: 1000
-  ttl_hours: 24
+  generation_cache: true
+  model_cache: true
+  cache_dir: ".cache/docgenai"
+  model_cache_dir: ".cache/models"
+  max_cache_size_mb: 2000
+  max_generation_cache_mb: 500
+  max_model_cache_mb: 1500
+  generation_ttl_hours: 24
+  model_ttl_hours: 168
 
 output:
   directory: "output"
   template: "default"
   include_architecture: true
   include_code_stats: true
+```
+
+### Cache Management
+
+The system uses multiple cache types for optimal performance:
+
+#### Output Cache (Generation Cache)
+
+- **Purpose**: Stores generated documentation results to avoid re-processing unchanged files
+- **Location**: `.cache/docgenai/` or configured `cache_dir`
+- **Content**: JSON files containing documentation text, metadata, and generation timestamps
+- **TTL**: 24 hours by default (configurable via `generation_ttl_hours`)
+- **Size Limit**: 500MB by default (configurable via `max_generation_cache_mb`)
+
+#### Model Cache
+
+- **Purpose**: Stores downloaded model files and session data
+- **Location**: `.cache/models/` or configured `model_cache_dir`
+- **Content**: Model weights, tokenizer files, configuration files
+- **TTL**: 168 hours (1 week) by default (configurable via `model_ttl_hours`)
+- **Size Limit**: 1500MB by default (configurable via `max_model_cache_mb`)
+
+#### Cache Management Commands
+
+```bash
+# View cache statistics
+docgenai cache
+docgenai cache --stats
+
+# Clear all caches
+docgenai cache --clear
+
+# Clear only output/generation cache
+docgenai cache --clear-output-cache
+
+# Clear only model cache
+docgenai cache --clear-model-cache
+
+# Generate without using output cache (force regeneration)
+docgenai generate myfile.py --no-output-cache
+
+# Generate with output cache disabled for entire directory
+docgenai generate src/ --no-output-cache --output-dir fresh-docs
+```
+
+#### Cache Configuration Options
+
+```yaml
+cache:
+  # Enable/disable caching entirely
+  enabled: true
+
+  # Individual cache type controls
+  generation_cache: true    # Output cache
+  model_cache: true        # Model file cache
+
+  # Cache directories
+  cache_dir: ".cache/docgenai"     # Output cache location
+  model_cache_dir: ".cache/models" # Model cache location
+
+  # Size limits (MB)
+  max_cache_size_mb: 2000         # Total cache limit
+  max_generation_cache_mb: 500    # Output cache limit
+  max_model_cache_mb: 1500        # Model cache limit
+
+  # Time-to-live (hours)
+  generation_ttl_hours: 24        # How long to keep output cache
+  model_ttl_hours: 168           # How long to keep model cache
+
+  # Cleanup behavior
+  auto_cleanup: true              # Automatically clean old cache
+  cleanup_on_startup: false      # Clean cache on application start
 ```
 
 ## 7. Error Handling and Logging

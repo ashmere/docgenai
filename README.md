@@ -82,6 +82,30 @@ poetry run docgenai generate src/
 
 # Generate with custom output directory
 ./docker/run.sh generate src/ --output-dir docs/
+
+# Force regeneration without using cache
+./docker/run.sh generate src/models.py --no-output-cache
+```
+
+### Cache Management
+
+DocGenAI uses intelligent caching to improve performance:
+
+```bash
+# View cache statistics
+./docker/run.sh cache
+
+# Clear all caches (output + model)
+./docker/run.sh cache --clear
+
+# Clear only output/generation cache
+./docker/run.sh cache --clear-output-cache
+
+# Clear only model cache
+./docker/run.sh cache --clear-model-cache
+
+# Generate without using output cache (force fresh generation)
+./docker/run.sh generate src/ --no-output-cache
 ```
 
 ### Diagram Generation

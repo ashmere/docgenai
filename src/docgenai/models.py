@@ -9,14 +9,34 @@ The models are designed to generate comprehensive documentation
 for codebases with focus on clarity and architectural understanding.
 """
 
+import hashlib
 import logging
+import os
 import platform
+import sys
 import time
+import warnings
 from abc import ABC, abstractmethod
+from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, Dict, Optional
 
+# Suppress MLX deprecation warnings for cleaner output
+warnings.filterwarnings("ignore", message=".*mx.metal.* is deprecated.*")
+
 logger = logging.getLogger(__name__)
+
+
+@contextmanager
+def suppress_stderr():
+    """Context manager to temporarily suppress stderr output."""
+    with open(os.devnull, "w") as devnull:
+        old_stderr = sys.stderr
+        sys.stderr = devnull
+        try:
+            yield
+        finally:
+            sys.stderr = old_stderr
 
 
 class AIModel(ABC):
@@ -221,14 +241,27 @@ class DeepSeekCoderModel(AIModel):
     def _generate_with_mlx(self, prompt: str, max_tokens: int = None) -> str:
         """Generate text using MLX backend."""
         try:
+            from mlx_lm import sample_utils
+
             max_tokens = max_tokens or self.max_tokens
-            response = self.mlx_generate(
-                self.model,
-                self.tokenizer,
-                prompt=prompt,
-                max_tokens=max_tokens,
+
+            # Create sampler using make_sampler function
+            sampler = sample_utils.make_sampler(
                 temp=self.temperature,
+                top_p=self.top_p,
+                min_p=0.0,
+                top_k=self.top_k if hasattr(self, "top_k") else -1,
             )
+
+            # Suppress MLX deprecation warnings during generation
+            with suppress_stderr():
+                response = self.mlx_generate(
+                    self.model,
+                    self.tokenizer,
+                    prompt=prompt,
+                    max_tokens=max_tokens,
+                    sampler=sampler,
+                )
             return response
         except Exception as e:
             logger.error(f"❌ MLX generation failed: {str(e)}")
