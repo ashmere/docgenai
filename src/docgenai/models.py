@@ -361,7 +361,13 @@ The documentation should include:
 7. **Error Handling**: How errors are handled and common issues
 8. **Performance Considerations**: Any performance notes or optimizations
 
-Please write the documentation in clear, professional Markdown format. Use appropriate headers and formatting. Do NOT wrap your entire response in a code block.
+Please write the documentation in clear, professional Markdown format following these rules:
+- Use ## headers (not # headers) for main sections
+- Surround all lists with blank lines before and after
+- Use only single blank lines between sections
+- Specify language for all code blocks (```python, ```bash, etc.)
+- Do NOT wrap your entire response in a code block
+- Do NOT use duplicate section headings
 
 **File Path**: `{file_path}`
 
@@ -395,6 +401,12 @@ Focus on:
 6. **Extensibility**: How the code can be extended or modified
 7. **Design Principles**: SOLID principles, separation of concerns, etc.
 8. **Potential Improvements**: Suggestions for architectural improvements
+
+Follow markdown formatting rules:
+- Use ## headers for main sections, ### for subsections
+- Surround all lists with blank lines before and after
+- Use only single blank lines between sections
+- Avoid duplicate section headings
 
 **File Path**: `{file_path}`
 

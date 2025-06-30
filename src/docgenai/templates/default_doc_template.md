@@ -5,6 +5,7 @@
 {{ documentation }}
 
 {% if architecture_description and include_architecture %}
+
 ## Architecture Analysis
 
 {{ architecture_description }}

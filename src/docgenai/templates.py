@@ -89,7 +89,10 @@ class TemplateManager:
 
         # Add footer
         footer_content = self.render_footer(context)
-        return doc_content + "\n\n" + footer_content
+        full_content = doc_content + "\n\n" + footer_content
+
+        # Clean up markdown formatting
+        return self._clean_markdown(full_content)
 
     def render_directory_summary(self, context: Dict[str, Any]) -> str:
         """
@@ -263,6 +266,59 @@ All generated documentation files are available in the output directory.
 
         template = Template(template_content)
         return template.render(**context)
+
+    def _clean_markdown(self, content: str) -> str:
+        """
+        Clean up markdown formatting to avoid lint issues.
+
+        Args:
+            content: Raw markdown content
+
+        Returns:
+            Cleaned markdown content
+        """
+        import re
+
+        # Remove multiple consecutive blank lines
+        content = re.sub(r"\n\n\n+", "\n\n", content)
+
+        # Ensure lists are surrounded by blank lines
+        content = re.sub(r"([^\n])\n([0-9]+\. |\- |\* )", r"\1\n\n\2", content)
+        content = re.sub(r"([0-9]+\. .*|\- .*|\* .*)\n([^\n\s])", r"\1\n\n\2", content)
+
+        # Ensure headers are surrounded by blank lines
+        content = re.sub(r"([^\n])\n(#{1,6} )", r"\1\n\n\2", content)
+        content = re.sub(r"(#{1,6} .*)\n([^\n\s#])", r"\1\n\n\2", content)
+
+        # Ensure fenced code blocks are surrounded by blank lines
+        content = re.sub(r"([^\n])\n(```)", r"\1\n\n\2", content)
+        content = re.sub(r"(```)\n([^\n\s])", r"\1\n\n\2", content)
+
+        # Add language to fenced code blocks without language
+        content = re.sub(r"\n```\n", r"\n```text\n", content)
+
+        # Fix duplicate headings by adding numbers
+        lines = content.split("\n")
+        heading_counts = {}
+        for i, line in enumerate(lines):
+            if line.startswith("#"):
+                heading_text = line.strip("#").strip()
+                if heading_text in heading_counts:
+                    heading_counts[heading_text] += 1
+                    # Add number to duplicate heading
+                    level = len(line) - len(line.lstrip("#"))
+                    lines[i] = (
+                        "#" * level
+                        + f" {heading_text} ({heading_counts[heading_text]})"
+                    )
+                else:
+                    heading_counts[heading_text] = 1
+        content = "\n".join(lines)
+
+        # Ensure file ends with single newline
+        content = content.rstrip() + "\n"
+
+        return content
 
     def load_template(self, name: str) -> str:
         """
