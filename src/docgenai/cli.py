@@ -9,7 +9,6 @@ import logging
 import sys
 import time
 from pathlib import Path
-from typing import Optional
 
 import click
 
@@ -88,6 +87,7 @@ def generate(ctx, path, output_dir, architecture, no_output_cache):
 
     PATH can be a single file or directory to process.
 
+    \b
     Examples:
         docgenai generate myfile.py
         docgenai generate src/ --output-dir docs
@@ -124,11 +124,14 @@ def generate(ctx, path, output_dir, architecture, no_output_cache):
             generator_config["cache"]["enabled"] = False
             generator_config["cache"]["generation_cache"] = False
 
+        # Update output directory in config
+        generator_config["output"]["dir"] = output_dir
+        generator_config["output"]["include_architecture"] = architecture
+
         generator = DocumentationGenerator(model, generator_config)
 
         # Process the path
         input_path = Path(path)
-        output_path = Path(output_dir)
 
         if input_path.is_file():
             click.echo(f"📄 Processing file: {input_path}")
@@ -140,7 +143,7 @@ def generate(ctx, path, output_dir, architecture, no_output_cache):
                 sys.exit(1)
         else:
             click.echo(f"📁 Processing directory: {input_path}")
-            results = generator.process_directory(input_path, output_path)
+            results = generator.process_directory(input_path)
             if results:
                 click.echo(f"✅ Generated {len(results)} documentation files")
                 for result in results[:5]:  # Show first 5 results

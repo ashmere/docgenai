@@ -1,6 +1,4 @@
-# Documentation: {{ file_name }}
-
-## Documentation
+# Documentation: {{ file_name }}## Documentation
 
 {{ documentation }}
 

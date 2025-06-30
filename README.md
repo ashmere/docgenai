@@ -53,19 +53,105 @@ DocGenAI automatically detects your platform and uses the optimal model backend:
 
 ### macOS (Apple Silicon)
 
-- **Model**: `mlx-community/DeepSeek-Coder-V2-Lite-Instruct-8bit`
+- **Model**: `mlx-community/DeepSeek-Coder-V2-Lite-Instruct-4bit`
 - **Backend**: MLX with native Apple Silicon optimization
 - **Performance**: ~30-60s model loading, ~10-30s per file
 - **Memory**: ~4-6GB RAM usage
-- **Quantization**: 8-bit (MLX native)
+- **Quantization**: 4-bit (MLX native)
 
 ### Linux/Windows
 
-- **Model**: `deepseek-ai/DeepSeek-Coder-V2-Lite-Instruct`
+- **Model**: `TechxGenus/DeepSeek-Coder-V2-Lite-Instruct-AWQ`
 - **Backend**: Transformers with optional CUDA acceleration
 - **Performance**: ~60-300s model loading, ~15-90s per file
 - **Memory**: ~6-16GB RAM (depending on quantization)
-- **Quantization**: 4-bit/8-bit (configurable)
+- **Quantization**: 4-bit AWQ (pre-quantized)
+
+## Supported Models and Platforms
+
+### ✅ Tested and Supported
+
+| Platform | Environment | Model | Backend | Status | Performance |
+|----------|-------------|--------|---------|--------|-------------|
+| **macOS (Apple Silicon)** | Native Python | `mlx-community/DeepSeek-Coder-V2-Lite-Instruct-4bit` | MLX | ✅ **Fully Tested** | 6s load, 17s generation |
+| **macOS (Apple Silicon)** | Native Python | `mlx-community/DeepSeek-Coder-V2-Lite-Instruct-8bit` | MLX | ✅ **Fully Tested** | 8s load, 28s generation |
+| **Linux (x86_64)** | Docker | `TechxGenus/DeepSeek-Coder-V2-Lite-Instruct-AWQ` | Transformers | 🔄 **Architecture Ready** | Expected: 60-120s load |
+| **Linux (ARM64)** | Docker | `TechxGenus/DeepSeek-Coder-V2-Lite-Instruct-AWQ` | Transformers | 🔄 **Architecture Ready** | Expected: 60-120s load |
+
+### 🚧 Planned Support
+
+| Platform | Environment | Model | Backend | Status | Notes |
+|----------|-------------|--------|---------|--------|-------|
+| **Linux (x86_64)** | Native Python | `TechxGenus/DeepSeek-Coder-V2-Lite-Instruct-AWQ` | Transformers | 🔄 **Planned** | Requires CUDA/CPU testing |
+| **Windows** | Native Python | `TechxGenus/DeepSeek-Coder-V2-Lite-Instruct-AWQ` | Transformers | 🔄 **Planned** | Requires Windows testing |
+| **Windows** | Docker | `TechxGenus/DeepSeek-Coder-V2-Lite-Instruct-AWQ` | Transformers | 🔄 **Planned** | Docker Desktop support |
+
+### 📋 Model Details
+
+#### MLX Models (macOS Only)
+
+- **4-bit**: `mlx-community/DeepSeek-Coder-V2-Lite-Instruct-4bit` (~8.8GB download)
+- **8-bit**: `mlx-community/DeepSeek-Coder-V2-Lite-Instruct-8bit` (~8.8GB download)
+- **Advantages**: Native Apple Silicon optimization, fast inference
+- **Requirements**: macOS with Apple Silicon (M1/M2/M3)
+
+#### AWQ Models (Linux/Windows)
+
+- **4-bit AWQ**: `TechxGenus/DeepSeek-Coder-V2-Lite-Instruct-AWQ` (~3GB download)
+- **Advantages**: Pre-quantized, smaller download, memory efficient
+- **Requirements**: Linux/Windows with sufficient RAM (6GB+)
+
+### 🐳 Docker Support Status
+
+#### Current Docker Implementation
+
+- **Base Image**: `python:3.11-slim` with quantization libraries
+- **Supported Platforms**: `linux/amd64`, `linux/arm64`
+- **Model**: AWQ 4-bit quantized for memory efficiency
+- **Cache Strategy**: Platform-specific cache directories
+- **Memory Requirements**: 12GB+ recommended
+
+#### Docker Platform Detection
+
+```bash
+# Automatic platform-aware cache directories
+~/.cache/models-docker-amd64/    # Intel/AMD x86_64
+~/.cache/models-docker-arm64/    # ARM64 (Raspberry Pi, etc.)
+```
+
+### 🔧 Platform-Specific Configuration
+
+#### macOS (Native)
+
+```yaml
+model:
+  mlx_model: "mlx-community/DeepSeek-Coder-V2-Lite-Instruct-4bit"
+  quantization: "4bit"
+```
+
+#### Linux/Windows (Native or Docker)
+
+```yaml
+model:
+  transformers_model: "TechxGenus/DeepSeek-Coder-V2-Lite-Instruct-AWQ"
+  load_in_4bit: true
+```
+
+### 📊 Performance Benchmarks
+
+#### macOS M3 (Tested
+
+- **Model Loading**: 6-10 seconds (cached)
+- **Single File**: 17-28 seconds (with architecture analysis)
+- **Memory Usage**: 4-6GB peak
+- **Cache Performance**: Instant for unchanged files
+
+#### Docker Linux (Expected)
+
+- **Model Loading**: 60-120 seconds (first run)
+- **Single File**: 30-60 seconds (estimated)
+- **Memory Usage**: 8-12GB peak
+- **Download Size**: ~3GB (AWQ model)
 
 ## Usage Examples
 
@@ -334,7 +420,7 @@ See [LICENSE](LICENSE) file for details.
 
 ## Changelog
 
-- **v2.0 (deepseek-refactor)**: Complete migration to DeepSeek-Coder-V2-Lite with platform optimization
-- **v1.0 (MMaDA)**: Initial implementation with MMaDA model
+- **v0.2.0 (deepseek-refactor)**: Complete migration to DeepSeek-Coder-V2-Lite with platform optimization
+- **v0.1.0 (MMaDA)**: Initial implementation with MMaDA model
 
 For detailed development information, see [docs/developer.md](docs/developer.md).

@@ -8,7 +8,7 @@ model:
   # Linux/Windows: Uses standard transformers model
 
   # Model names (automatically selected based on platform)
-  mlx_model: "mlx-community/DeepSeek-Coder-V2-Lite-Instruct-8bit"     # macOS (Apple Silicon)
+  mlx_model: "mlx-community/DeepSeek-Coder-V2-Lite-Instruct-4bit"     # macOS (Apple Silicon) - 4-bit
   transformers_model: "TechxGenus/DeepSeek-Coder-V2-Lite-Instruct-AWQ"   # Linux/Windows - AWQ 4-bit quantized
 
   # Generation parameters

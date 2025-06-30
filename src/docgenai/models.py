@@ -460,23 +460,19 @@ def create_model(config: Optional[Dict[str, Any]] = None) -> AIModel:
         config: Optional configuration dictionary
 
     Returns:
-        AIModel instance (either MLXModel or TransformersModel)
+        AIModel instance (DeepSeekCoderModel)
     """
-    from .config import load_config
+    logger.info("🏭 Creating AI model instance...")
 
-    if config is None:
-        config = load_config()
-
-    # Use the new platform detection method
-    backend = AIModel._get_platform_info()
-
-    logger.info(f"🖥️  Platform detected: {platform.system()}")
-    logger.info(f"🤖 Model backend: {backend}")
-
-    if backend == "mlx":
-        return MLXModel(config)
-    else:
-        return TransformersModel(config)
+    try:
+        model = DeepSeekCoderModel(config)
+        logger.info(
+            f"✅ Created {model.__class__.__name__} with {model.backend} backend"
+        )
+        return model
+    except Exception as e:
+        logger.error(f"❌ Failed to create model: {str(e)}")
+        raise
 
 
 # Backward compatibility aliases
