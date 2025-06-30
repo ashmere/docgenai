@@ -1,132 +1,117 @@
 # DocGenAI
 
-AI-powered documentation and diagramming tool using the MMaDA multimodal model.
+AI-powered documentation generator using DeepSeek-Coder-V2-Lite models with platform-optimized performance.
 
 ## Overview
 
-DocGenAI is a Python CLI tool that uses the MMaDA (Multimodal Assistant for Data Analysis) model to automatically generate comprehensive technical documentation and architecture diagrams for your codebases. It can analyze code structure, understand functionality, and create visual representations to help developers understand complex systems.
+DocGenAI is a Python CLI tool that automatically generates comprehensive technical documentation for your codebases using state-of-the-art AI models. It features platform-aware optimization, intelligent caching, and supports multiple programming languages.
 
-## 🚀 Quick Start (Docker - Recommended)
+**Key Features:**
 
-**For best performance and compatibility (especially on M1/M2/M3 Macs), use Docker:**
+- 🤖 **Platform-Optimized AI**: MLX for Apple Silicon, Transformers for others
+- 📝 **Comprehensive Documentation**: Code analysis, architecture descriptions, usage examples
+- 🚀 **High Performance**: Intelligent caching and platform-specific optimizations
+- 🎯 **Multi-Language Support**: Python, JavaScript, TypeScript, C++, and more
+- 💾 **Smart Caching**: Separate output and model caches for optimal performance
+- 🔧 **Flexible Configuration**: YAML-based configuration with CLI overrides
 
-```bash
-# 1. Build the Docker image
-docker build -f docker/Dockerfile -t docgenai .
+## 🚀 Quick Start
 
-# 2. Generate documentation for a file
-./docker/run.sh generate src/docgenai/models.py
-
-# 3. Generate a diagram
-./docker/run.sh diagram src/docgenai/models.py
-
-# 4. Process entire directory
-./docker/run.sh generate src/
-```
-
-## Features
-
-- 📝 **Code Analysis**: Deep understanding of code structure and functionality
-- 🎨 **Architecture Diagrams**: Automatic generation of Mermaid.js system diagrams
-- 📚 **Documentation Generation**: Comprehensive technical documentation
-- 🔄 **Documentation Improvement**: Enhance existing documentation
-- 📋 **Template-driven Output**: Customizable formats and styles
-- 💾 **Intelligent Caching**: Avoid re-processing unchanged files
-- 🎯 **Multiple Formats**: Support for Python, with more languages planned
-
-## Why Docker?
-
-- ✅ **M1/M2/M3 Mac Compatible**: Avoids Apple Silicon compatibility issues
-- ✅ **Faster Model Loading**: Proper quantization support (4-bit/8-bit)
-- ✅ **Consistent Performance**: Same behavior across all platforms
-- ✅ **No Setup Hassles**: All dependencies included
-
-## Installation & Setup
-
-### Option 1: Docker (Recommended)
+### Installation
 
 ```bash
 # Clone the repository
 git clone <repository-url>
 cd docgenai
 
-# Make runner script executable
-chmod +x docker/run.sh
-
-# Build and run
-./docker/run.sh --build generate src/
-```
-
-### Option 2: Native Installation (Advanced Users)
-
-⚠️ **Warning**: Native installation on M1/M2/M3 Macs may experience slow performance (1+ hours for model loading) due to quantization compatibility issues.
-
-```bash
 # Install dependencies
 poetry install
 
-# Run (may be very slow on Apple Silicon)
-poetry run docgenai generate src/
+# Quick test
+poetry run docgenai test simple_test.py
 ```
+
+### Basic Usage
+
+```bash
+# Generate documentation for a single file
+poetry run docgenai generate myfile.py
+
+# Process entire directory
+poetry run docgenai generate src/ --output-dir docs
+
+# Force fresh generation (bypass cache)
+poetry run docgenai generate src/models.py --no-output-cache
+
+# View system information
+poetry run docgenai info
+```
+
+## Platform Optimization
+
+DocGenAI automatically detects your platform and uses the optimal model backend:
+
+### macOS (Apple Silicon)
+
+- **Model**: `mlx-community/DeepSeek-Coder-V2-Lite-Instruct-8bit`
+- **Backend**: MLX with native Apple Silicon optimization
+- **Performance**: ~30-60s model loading, ~10-30s per file
+- **Memory**: ~4-6GB RAM usage
+- **Quantization**: 8-bit (MLX native)
+
+### Linux/Windows
+
+- **Model**: `deepseek-ai/DeepSeek-Coder-V2-Lite-Instruct`
+- **Backend**: Transformers with optional CUDA acceleration
+- **Performance**: ~60-300s model loading, ~15-90s per file
+- **Memory**: ~6-16GB RAM (depending on quantization)
+- **Quantization**: 4-bit/8-bit (configurable)
 
 ## Usage Examples
 
-### Basic Documentation Generation
+### Documentation Generation
 
 ```bash
-# Generate docs for a single file
-./docker/run.sh generate src/models.py
+# Single file with architecture analysis
+poetry run docgenai generate src/models.py
 
-# Generate docs for entire project
-./docker/run.sh generate src/ --verbose
+# Directory processing
+poetry run docgenai generate src/ --output-dir documentation
 
-# Generate with custom output directory
-./docker/run.sh generate src/ --output-dir docs/
+# Exclude architecture analysis for faster processing
+poetry run docgenai generate large_project/ --no-architecture
 
-# Force regeneration without using cache
-./docker/run.sh generate src/models.py --no-output-cache
+# Force regeneration without cache
+poetry run docgenai generate src/core.py --no-output-cache
 ```
 
 ### Cache Management
 
-DocGenAI uses intelligent caching to improve performance:
-
 ```bash
 # View cache statistics
-./docker/run.sh cache
+poetry run docgenai cache
 
-# Clear all caches (output + model)
-./docker/run.sh cache --clear
+# Clear all caches
+poetry run docgenai cache --clear
 
-# Clear only output/generation cache
-./docker/run.sh cache --clear-output-cache
+# Clear only output cache (keep model files)
+poetry run docgenai cache --clear-output-cache
 
-# Clear only model cache
-./docker/run.sh cache --clear-model-cache
-
-# Generate without using output cache (force fresh generation)
-./docker/run.sh generate src/ --no-output-cache
+# Clear only model cache (keep generation results)
+poetry run docgenai cache --clear-model-cache
 ```
 
-### Diagram Generation
+### Testing and Development
 
 ```bash
-# Create architecture diagram for a file
-./docker/run.sh diagram src/core.py
+# Quick test without saving files
+poetry run docgenai test example.py
 
-# Generate with verbose logging
-./docker/run.sh --verbose diagram src/models.py
-```
+# Verbose logging for debugging
+poetry run docgenai --verbose generate problematic_file.py
 
-### Interactive Development
-
-```bash
-# Start interactive shell for development
-./docker/run.sh shell
-
-# Inside container:
-poetry run docgenai generate src/models.py
-poetry run docgenai --help
+# System information and model status
+poetry run docgenai info
 ```
 
 ## Configuration
@@ -134,77 +119,222 @@ poetry run docgenai --help
 Create a `config.yaml` file to customize behavior:
 
 ```yaml
+# AI Model Configuration
 model:
-  name: "Gen-Verse/MMaDA-8B-Base"
-  quantization: "4bit"  # Options: 4bit, 8bit, none
-  session_cache: true
+  temperature: 0.7          # Creativity level (0.0-2.0)
+  max_tokens: 2048          # Maximum output length
+  top_p: 0.8               # Nucleus sampling
+  quantization: "4bit"     # Options: "none", "8bit", "4bit"
 
+# Cache Configuration
 cache:
   enabled: true
-  generation_cache: true
-  max_cache_size_mb: 1000
+  generation_cache: true    # Cache documentation results
+  model_cache: true        # Cache downloaded models
+  max_cache_size_mb: 2000  # Total cache limit
+  generation_ttl_hours: 24 # How long to keep results
 
+# Output Configuration
 output:
   dir: "output"
-  format: "markdown"
+  include_architecture: true
+  include_code_stats: true
+  markdown_style: "github"
 ```
 
 ## Performance Expectations
 
-| Platform | Quantization | First Load | Subsequent | Memory |
-|----------|-------------|------------|------------|--------|
-| Docker (All) | 4-bit | 2-5 min | 30-60 sec | ~2GB |
-| Docker (All) | 8-bit | 3-8 min | 60-120 sec | ~4GB |
-| M1/M2/M3 Native | none | 10-30 min | 5-15 min | ~16GB |
+| Platform | Model Loading | Single File | Memory Usage |
+|----------|---------------|-------------|--------------|
+| **macOS (MLX)** | 30-60s | 10-30s | 4-6GB |
+| **Linux (CUDA)** | 60-120s | 15-45s | 8-12GB |
+| **Linux (CPU)** | 120-300s | 30-90s | 6-10GB |
+| **Windows** | 60-300s | 15-90s | 6-16GB |
 
-## Troubleshooting
+*First run times include model download. Subsequent runs use cached models.*
 
-### Model Loading Issues
+## Supported Languages
 
-- **Use Docker**: Resolves most compatibility issues
-- **Check memory**: Ensure Docker has 8GB+ allocated
-- **Verify network**: Model downloads require stable internet
-- **Use 4-bit quantization**: Fastest loading option
+- **Python** (.py) - Full support with advanced analysis
+- **JavaScript/TypeScript** (.js, .ts, .jsx, .tsx)
+- **C/C++** (.c, .cpp, .h, .hpp)
+- **Java** (.java)
+- **Go** (.go)
+- **Rust** (.rs)
+- **Ruby** (.rb)
+- **PHP** (.php)
+- **C#** (.cs)
+- **Swift** (.swift)
+- **Kotlin** (.kt)
+- **Scala** (.scala)
+- **R** (.r, .R)
 
-### Common Issues
+## Output Examples
 
-- **Slow performance on Mac**: Use Docker instead of native installation
-- **Out of memory**: Increase Docker memory limit or use 4-bit quantization
-- **Model download hangs**: Check internet connection and Docker resources
+Generated documentation includes:
+
+### File Documentation
+
+- **Overview**: High-level description of file purpose
+- **Key Components**: Classes, functions, and important variables
+- **Architecture**: Design patterns and code organization
+- **Usage Examples**: Practical code examples
+- **Dependencies**: Required imports and external dependencies
+- **Configuration**: Environment variables and settings
+- **Error Handling**: Exception handling patterns
+- **Performance**: Optimization notes and considerations
+
+### Architecture Analysis
+
+- **Code Organization**: Module structure and relationships
+- **Design Patterns**: Identified architectural patterns
+- **Data Flow**: How data moves through the system
+- **Dependencies**: Internal and external dependencies
+- **Interfaces**: Public APIs and contracts
+- **Extensibility**: Points for future enhancement
+- **Improvement Suggestions**: Actionable optimization recommendations
+
+## Cache System
+
+DocGenAI uses a sophisticated two-tier caching system:
+
+### Output Cache
+
+- **Purpose**: Stores generated documentation to avoid re-processing unchanged files
+- **Location**: `.docgenai_cache/` (configurable)
+- **Content**: Documentation text, metadata, timestamps
+- **TTL**: 24 hours (configurable)
+- **Benefits**: Instant results for unchanged files
+
+### Model Cache
+
+- **Purpose**: Stores downloaded model files and tokenizers
+- **Location**: `.cache/models/` (configurable)
+- **Content**: Model weights, tokenizer files, configuration
+- **TTL**: 1 week (configurable)
+- **Benefits**: Faster startup after initial download
+
+## CLI Commands
+
+### Core Commands
+
+```bash
+# Generate documentation
+docgenai generate <path> [options]
+
+# Test generation without saving
+docgenai test <file>
+
+# Show system information
+docgenai info
+
+# Manage caches
+docgenai cache [options]
+```
+
+### Global Options
+
+```bash
+# Verbose logging
+docgenai --verbose <command>
+
+# Custom configuration
+docgenai --config custom.yaml <command>
+
+# Help for any command
+docgenai <command> --help
+```
 
 ## Development
 
-See [docs/developer.md](docs/developer.md) for detailed development guidelines, including:
-
-- Platform compatibility information
-- Docker development workflow
-- Performance optimization tips
-- Troubleshooting guide
-
-## Project Structure
+### Project Structure
 
 ```text
 docgenai/
 ├── src/docgenai/          # Main application code
-│   ├── models.py          # AI model abstractions
-│   ├── core.py           # Core processing logic
+│   ├── models.py          # AI model abstractions and platform detection
+│   ├── core.py           # Documentation generation pipeline
 │   ├── cli.py            # Command-line interface
+│   ├── config.py         # Configuration management
+│   ├── cache.py          # Caching system
+│   ├── templates.py      # Template rendering
 │   └── templates/        # Documentation templates
-├── docker/               # Docker configuration
-│   ├── Dockerfile        # Container definition
-│   ├── run.sh           # Convenient runner script
-│   └── README.md        # Docker usage guide
-├── docs/                # Documentation
-└── tests/               # Test suite
+├── docs/                 # Documentation
+│   ├── developer.md      # Development guide
+│   └── plan.md          # Project roadmap
+├── tests/               # Test suite
+├── docker/              # Docker configuration (optional)
+└── config.yaml         # Default configuration
 ```
 
-## Contributing
+### Development Setup
 
-1. Use Docker for development to ensure consistent environment
-2. Follow the coding standards in [docs/developer.md](docs/developer.md)
-3. Add tests for new functionality
-4. Update documentation for any changes
+```bash
+# Install development dependencies
+poetry install --with dev
+
+# Run pre-commit hooks
+poetry run pre-commit install
+poetry run pre-commit run --all-files
+
+# Run tests
+poetry run pytest
+
+# Type checking
+poetry run mypy src/
+```
+
+### Contributing
+
+1. Follow the coding standards in [docs/developer.md](docs/developer.md)
+2. Add tests for new functionality
+3. Update documentation for any changes
+4. Run pre-commit hooks before committing
+5. Use conventional commit messages
+
+## Troubleshooting
+
+### Common Issues
+
+**Slow performance on Apple Silicon:**
+
+- ✅ **Solution**: Use native installation (poetry install) - MLX optimization included
+
+**Out of memory errors:**
+
+- ✅ **Solution**: Use 4-bit quantization in config.yaml
+- ✅ **Alternative**: Process files individually instead of entire directories
+
+**Model download issues:**
+
+- ✅ **Solution**: Check internet connection and available disk space
+- ✅ **Alternative**: Clear model cache and retry: `docgenai cache --clear-model-cache`
+
+**Cache-related issues:**
+
+- ✅ **Solution**: Clear output cache: `docgenai cache --clear-output-cache`
+- ✅ **Alternative**: Use `--no-output-cache` flag for fresh generation
+
+### Getting Help
+
+```bash
+# System diagnostics
+poetry run docgenai info --verbose
+
+# Cache statistics
+poetry run docgenai cache --stats
+
+# Command help
+poetry run docgenai <command> --help
+```
 
 ## License
 
 See [LICENSE](LICENSE) file for details.
+
+## Changelog
+
+- **v2.0 (deepseek-refactor)**: Complete migration to DeepSeek-Coder-V2-Lite with platform optimization
+- **v1.0 (MMaDA)**: Initial implementation with MMaDA model
+
+For detailed development information, see [docs/developer.md](docs/developer.md).
