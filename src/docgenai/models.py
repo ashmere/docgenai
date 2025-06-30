@@ -128,6 +128,12 @@ class DeepSeekCoderModel(AIModel):
         self.trust_remote_code = model_config.get("trust_remote_code", True)
         self.quantization = model_config.get("quantization", "4bit")
 
+        # Offline mode settings
+        self.offline_mode = model_config.get("offline_mode", True)
+        self.check_for_updates = model_config.get("check_for_updates", False)
+        self.force_download = model_config.get("force_download", False)
+        self.local_files_only = model_config.get("local_files_only", True)
+
         logger.info(f"🖥️  Platform detected: {self.platform}")
         logger.info(f"🤖 Model backend: {self.backend}")
         logger.info(f"📍 Model path: {self.model_path}")
@@ -164,9 +170,18 @@ class DeepSeekCoderModel(AIModel):
 
             self.mlx_generate = generate
 
-            # Load model and tokenizer
+            # Load model and tokenizer with offline settings
             logger.info(f"📦 Loading {self.model_path}...")
-            self.model, self.tokenizer = load(self.model_path)
+
+            # Configure download behavior for MLX
+            load_kwargs = {}
+            if self.offline_mode and not self.force_download:
+                # For MLX, we'll try to load locally first
+                logger.info("📴 Offline mode: attempting to use cached model")
+            elif self.force_download:
+                logger.info("⬇️  Force download: re-downloading model")
+
+            self.model, self.tokenizer = load(self.model_path, **load_kwargs)
             logger.info("✅ MLX model loaded successfully")
 
         except ImportError as e:
@@ -192,52 +207,73 @@ class DeepSeekCoderModel(AIModel):
             # Check if this is an AWQ model (already quantized)
             is_awq_model = "awq" in self.model_path.lower()
 
+            # Configure download behavior
+            load_kwargs = {
+                "torch_dtype": torch.float16,
+                "device_map": "auto",
+                "trust_remote_code": True,
+                "low_cpu_mem_usage": True,
+            }
+
+            # Add offline mode parameters
+            if self.offline_mode and not self.force_download:
+                load_kwargs["local_files_only"] = True
+                logger.info("📴 Offline mode: using cached models only")
+            elif self.force_download:
+                load_kwargs["local_files_only"] = False
+                load_kwargs["force_download"] = True
+                logger.info("⬇️  Force download: re-downloading model")
+            else:
+                load_kwargs["local_files_only"] = False
+                if self.check_for_updates:
+                    logger.info("🔄 Checking for model updates")
+                else:
+                    logger.info("🌐 Online mode: may download if not cached")
+
             if is_awq_model:
                 logger.info(
                     "⚙️  Detected AWQ model - loading without additional quantization"
                 )
                 # AWQ models are already quantized, load them directly
                 self.model = AutoModelForCausalLM.from_pretrained(
-                    self.model_path,
-                    torch_dtype=torch.float16,
-                    device_map="auto",
-                    trust_remote_code=True,
-                    low_cpu_mem_usage=True,
+                    self.model_path, **load_kwargs
                 )
             else:
                 # For non-AWQ models, use 4-bit quantization if requested
                 logger.info(f"⚙️  Setting up {self.quantization} quantization...")
 
                 if self.quantization == "4bit":
+                    load_kwargs["load_in_4bit"] = True
                     self.model = AutoModelForCausalLM.from_pretrained(
-                        self.model_path,
-                        load_in_4bit=True,
-                        device_map="auto",
-                        torch_dtype=torch.float16,
-                        trust_remote_code=True,
-                        low_cpu_mem_usage=True,
+                        self.model_path, **load_kwargs
                     )
                 elif self.quantization == "8bit":
+                    load_kwargs["load_in_8bit"] = True
                     self.model = AutoModelForCausalLM.from_pretrained(
-                        self.model_path,
-                        load_in_8bit=True,
-                        device_map="auto",
-                        torch_dtype=torch.float16,
-                        trust_remote_code=True,
-                        low_cpu_mem_usage=True,
+                        self.model_path, **load_kwargs
                     )
                 else:
                     self.model = AutoModelForCausalLM.from_pretrained(
-                        self.model_path,
-                        device_map="auto",
-                        torch_dtype=torch.float16,
-                        trust_remote_code=True,
-                        low_cpu_mem_usage=True,
+                        self.model_path, **load_kwargs
                     )
 
             logger.info("📝 Step 2/4: Loading tokenizer...")
+
+            # Configure tokenizer loading with same offline settings
+            tokenizer_kwargs = {
+                "trust_remote_code": True,
+            }
+
+            if self.offline_mode and not self.force_download:
+                tokenizer_kwargs["local_files_only"] = True
+            elif self.force_download:
+                tokenizer_kwargs["local_files_only"] = False
+                tokenizer_kwargs["force_download"] = True
+            else:
+                tokenizer_kwargs["local_files_only"] = False
+
             self.tokenizer = AutoTokenizer.from_pretrained(
-                self.model_path, trust_remote_code=True
+                self.model_path, **tokenizer_kwargs
             )
 
             # Ensure tokenizer has pad token
@@ -461,6 +497,9 @@ Provide the architectural analysis:"""
             "temperature": self.temperature,
             "max_tokens": self.max_tokens,
             "quantization": self.quantization if not self.is_mac else "8bit (MLX)",
+            "offline_mode": self.offline_mode,
+            "check_for_updates": self.check_for_updates,
+            "local_files_only": self.local_files_only,
         }
 
 

@@ -85,8 +85,33 @@ def cli(ctx, config, verbose):
     is_flag=True,
     help="Use extended footer with detailed file and model information",
 )
+@click.option(
+    "--check-updates",
+    is_flag=True,
+    help="Check for model updates (overrides offline mode)",
+)
+@click.option(
+    "--force-download",
+    is_flag=True,
+    help="Force re-download of models even if cached",
+)
+@click.option(
+    "--offline",
+    is_flag=True,
+    help="Force offline mode (use only cached models)",
+)
 @click.pass_context
-def generate(ctx, path, output_dir, architecture, no_output_cache, extended_footer):
+def generate(
+    ctx,
+    path,
+    output_dir,
+    architecture,
+    no_output_cache,
+    extended_footer,
+    check_updates,
+    force_download,
+    offline,
+):
     """
     Generate comprehensive documentation for code files or directories.
 
@@ -98,6 +123,9 @@ def generate(ctx, path, output_dir, architecture, no_output_cache, extended_foot
         docgenai generate src/ --output-dir docs
         docgenai generate . --no-architecture
         docgenai generate src/ --no-output-cache
+        docgenai generate src/ --check-updates
+        docgenai generate src/ --force-download
+        docgenai generate src/ --offline
     """
     config = ctx.obj["config"]
     verbose = ctx.obj.get("verbose", False)
@@ -110,9 +138,36 @@ def generate(ctx, path, output_dir, architecture, no_output_cache, extended_foot
 
         click.echo(f"🖥️  Platform: {platform.system()}")
 
+        # Apply CLI overrides to model configuration
+        model_config = config.copy()
+        if check_updates:
+            model_config["model"]["check_for_updates"] = True
+            model_config["model"]["offline_mode"] = False
+            model_config["model"]["local_files_only"] = False
+            click.echo("🔄 Model update checking enabled")
+
+        if force_download:
+            model_config["model"]["force_download"] = True
+            model_config["model"]["check_for_updates"] = True
+            model_config["model"]["offline_mode"] = False
+            model_config["model"]["local_files_only"] = False
+            click.echo("⬇️  Force download enabled")
+
+        if offline:
+            model_config["model"]["offline_mode"] = True
+            model_config["model"]["check_for_updates"] = False
+            model_config["model"]["local_files_only"] = True
+            click.echo("📴 Offline mode enabled")
+
+        # Show offline/online status
+        if model_config["model"]["offline_mode"]:
+            click.echo("📴 Mode: Offline (using cached models only)")
+        else:
+            click.echo("🌐 Mode: Online (may download/update models)")
+
         # Initialize model
         click.echo("🤖 Initializing AI model...")
-        model = create_model(config)
+        model = create_model(model_config)
 
         # Show model information
         model_info = model.get_model_info()
@@ -123,7 +178,7 @@ def generate(ctx, path, output_dir, architecture, no_output_cache, extended_foot
         click.echo(f"🗜️  Quantization: {model_info['quantization']}")
 
         # Initialize generator with cache configuration
-        generator_config = config.copy()
+        generator_config = model_config.copy()
         if no_output_cache:
             # Disable output cache for this run
             generator_config["cache"]["enabled"] = False
@@ -203,6 +258,15 @@ def info(ctx):
         click.echo(f"   📝 Max tokens: {model_info['max_tokens']}")
         click.echo(f"   🗜️  Quantization: {model_info['quantization']}")
         click.echo(f"   ✅ Available: {model_info['available']}")
+
+        # Show offline mode status
+        offline_mode = config["model"].get("offline_mode", False)
+        check_updates = config["model"].get("check_for_updates", False)
+        local_files_only = config["model"].get("local_files_only", False)
+
+        click.echo(f"   📴 Offline mode: {offline_mode}")
+        click.echo(f"   🔄 Check updates: {check_updates}")
+        click.echo(f"   📂 Local files only: {local_files_only}")
 
     except Exception as e:
         click.echo(f"   ❌ Model initialization failed: {e}")

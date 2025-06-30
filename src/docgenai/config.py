@@ -25,7 +25,7 @@ def get_default_config() -> Dict[str, Any]:
         "model": {
             # Platform-aware model selection
             "mlx_model": "mlx-community/DeepSeek-Coder-V2-Lite-Instruct-8bit",
-            "transformers_model": "deepseek-ai/DeepSeek-Coder-V2-Lite-Instruct",
+            "transformers_model": ("deepseek-ai/DeepSeek-Coder-V2-Lite-Instruct"),
             # Generation parameters
             "temperature": 0.7,
             "max_tokens": 2048,
@@ -34,9 +34,14 @@ def get_default_config() -> Dict[str, Any]:
             "do_sample": True,
             # Quantization settings (non-MLX platforms)
             "quantization": "4bit",
-            # Model caching
+            # Model caching and offline behavior
             "session_cache": True,
             "cache_model_files": True,
+            "offline_mode": True,
+            "check_for_updates": False,
+            "force_download": False,
+            "update_check_interval_hours": 168,
+            "local_files_only": True,
             # Hardware optimization
             "device_map": "auto",
             "torch_dtype": "auto",
@@ -128,7 +133,7 @@ def get_default_config() -> Dict[str, Any]:
             "level": "INFO",
             "verbose_level": "DEBUG",
             "format": "%(message)s",
-            "verbose_format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+            "verbose_format": ("%(asctime)s - %(name)s - %(levelname)s - %(message)s"),
             "console": True,
             "file": False,
             "log_file": "logs/docgenai.log",
@@ -161,7 +166,10 @@ def get_default_config() -> Dict[str, Any]:
                 "include_branch_info": True,
                 "include_author_info": False,
             },
-            "vscode": {"enabled": False, "config_path": ".vscode/settings.json"},
+            "vscode": {
+                "enabled": False,
+                "config_path": ".vscode/settings.json",
+            },
             "github_actions": {
                 "enabled": False,
                 "workflow_path": ".github/workflows/docs.yml",
@@ -358,7 +366,7 @@ def validate_config(config: Dict[str, Any]) -> Dict[str, Any]:
     max_cache_size = cache_config.get("max_cache_size_mb", 2000)
     if max_cache_size < 0:
         raise ValueError(
-            f"Cache max_cache_size_mb must be non-negative, got {max_cache_size}"
+            f"Cache max_cache_size_mb must be non-negative, " f"got {max_cache_size}"
         )
 
     # Validate performance settings
@@ -367,7 +375,7 @@ def validate_config(config: Dict[str, Any]) -> Dict[str, Any]:
     max_memory = performance_config.get("max_memory_usage_gb", 16)
     if max_memory <= 0:
         raise ValueError(
-            f"Performance max_memory_usage_gb must be positive, got {max_memory}"
+            f"Performance max_memory_usage_gb must be positive, " f"got {max_memory}"
         )
 
     max_workers = config.get("generation", {}).get("max_workers", 4)
@@ -465,7 +473,11 @@ def create_default_config_file(path: str = "config.yaml") -> Path:
 
     with open(config_path, "w", encoding="utf-8") as f:
         yaml.dump(
-            default_config, f, default_flow_style=False, indent=2, sort_keys=False
+            default_config,
+            f,
+            default_flow_style=False,
+            indent=2,
+            sort_keys=False,
         )
 
     return config_path

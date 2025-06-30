@@ -1,5 +1,19 @@
 # DocGenAI Configuration File
 # Comprehensive configuration for code documentation generation
+#
+# OFFLINE-FRIENDLY DEFAULTS:
+# This configuration is optimized for offline work and respects HuggingFace API limits.
+# By default, the application will:
+# - Use cached models without checking for updates
+# - Only download models if they're not already cached
+# - Avoid unnecessary network calls to HuggingFace
+#
+# To enable update checking, set:
+# - model.check_for_updates: true
+# - model.offline_mode: false
+#
+# To force re-download of models, set:
+# - model.force_download: true
 
 # AI Model Configuration
 model:
@@ -24,9 +38,14 @@ model:
   load_in_4bit: true
   load_in_8bit: false
 
-  # Model caching
+  # Model caching and offline behavior
   session_cache: true      # Keep model in memory between generations
   cache_model_files: true  # Cache downloaded model files
+  offline_mode: true       # Prefer cached models, avoid network calls
+  check_for_updates: false # Don't check for model updates by default (offline-friendly)
+  force_download: false    # Don't re-download cached models (set to true to force update)
+  update_check_interval_hours: 168  # How often to check for updates when enabled (1 week)
+  local_files_only: true   # HuggingFace parameter: only use local files, no downloads
 
   # Hardware optimization
   device_map: "auto"       # Automatic device mapping for multi-GPU
