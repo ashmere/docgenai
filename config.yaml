@@ -86,7 +86,6 @@ output:
   include_code_stats: true              # Include code statistics
   include_dependencies: true            # Include dependency analysis
   include_examples: true                # Include usage examples
-  include_diagrams: true                # Include Mermaid dataflow diagrams in architecture analysis
 
   # File organization
   create_subdirs: true                  # Create subdirectories for organization

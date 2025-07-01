@@ -13,9 +13,8 @@ import time
 import warnings
 from abc import ABC, abstractmethod
 from contextlib import contextmanager
-from io import StringIO
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, Optional
 
 # Suppress MLX deprecation warnings for cleaner output
 warnings.filterwarnings("ignore", message=".*mx.metal.* is deprecated.*")
@@ -63,13 +62,12 @@ class AIModel(ABC):
     @staticmethod
     def _get_platform_info():
         """Get platform information for model selection."""
-        system = platform.system()
         machine = platform.machine()
 
         # Check if MLX is available (for Apple Silicon, even in Docker)
         mlx_available = False
         try:
-            import mlx.core as mx
+            import mlx.core  # noqa: F401
 
             mlx_available = True
         except ImportError:
@@ -99,6 +97,11 @@ class DeepSeekCoderModel(AIModel):
         self.model = None
         self.tokenizer = None
         self.is_mac = self.platform == "Darwin"
+
+        # Initialize prompt manager
+        from .prompts import PromptManager
+
+        self.prompt_manager = PromptManager()
 
         # Get model configuration
         model_config = self.config.get("model", {})
@@ -379,47 +382,10 @@ class DeepSeekCoderModel(AIModel):
         """Generate comprehensive documentation for the given code."""
         logger.info(f"📝 Generating documentation for {file_path}")
 
-        # Detect programming language
-        file_extension = Path(file_path).suffix.lower()
-        language = self._detect_language(file_extension)
-
-        # Create documentation prompt
-        prompt = f"""You are an expert software developer and technical writer. Generate comprehensive, clear, and well-structured documentation for the following {language} code.
-
-The documentation should include:
-
-1. **Overview**: Brief description of what the code does
-2. **Key Components**: Main classes, functions, and their purposes
-3. **Architecture**: How the components work together
-4. **Usage Examples**: Practical examples of how to use the code
-5. **Dependencies**: Any external libraries or modules used
-6. **Configuration**: Any configuration options or environment variables
-7. **Error Handling**: How errors are handled and common issues
-8. **Performance Considerations**: Any performance notes or optimizations
-
-Please write the documentation in clear, professional Markdown format following these rules:
-- Use ## headers (not # headers) for main sections
-- Surround all lists with blank lines before and after
-- Use only single blank lines between sections
-- Specify language for all code blocks (```python, ```bash, etc.)
-- Do NOT wrap your entire response in a code block
-- Do NOT use duplicate section headings
-- CRITICAL: Every code block MUST be properly closed with ```
-- CRITICAL: Do NOT add ```text markers anywhere in the output
-- CRITICAL: Ensure all code examples are complete and properly formatted
-- FORBIDDEN: Never use ```text anywhere in the response
-- FORBIDDEN: Do not add any text after closing code blocks with ```
-- FORBIDDEN: Do NOT create any Mermaid diagrams in the main documentation
-- FORBIDDEN: Diagrams belong only in the Architecture Analysis section
-
-**File Path**: `{file_path}`
-
-**Code**:
-```{language}
-{code}
-```
-
-Provide the architectural analysis{(" with Mermaid diagram" if kwargs.get('include_diagrams', True) else "")}:"""
+        # Build prompt using prompt manager
+        prompt = self.prompt_manager.build_documentation_prompt(
+            code, file_path, **kwargs
+        )
 
         return self._generate_text(prompt)
 
@@ -429,138 +395,11 @@ Provide the architectural analysis{(" with Mermaid diagram" if kwargs.get('inclu
         """Generate architectural analysis for the given code."""
         logger.info(f"🏗️  Generating architecture description for {file_path}")
 
-        file_extension = Path(file_path).suffix.lower()
-        language = self._detect_language(file_extension)
-        include_diagrams = kwargs.get("include_diagrams", True)
-
-        # Base sections for analysis
-        base_sections = """1. **Architectural Patterns**: Design patterns used (MVC, Observer, Factory, etc.)
-2. **Code Organization**: How the code is structured and organized
-3. **Data Flow Analysis**: Detailed description of how data moves through the system"""
-
-        # Add diagram section if enabled
-        if include_diagrams:
-            sections = (
-                base_sections
-                + """
-4. **Data Flow Diagram**: Create a Mermaid flowchart showing the data flow
-5. **Dependencies**: Internal and external dependencies
-6. **Interfaces**: Public APIs and interfaces exposed
-7. **Extensibility**: How the code can be extended or modified
-8. **Design Principles**: SOLID principles, separation of concerns, etc.
-9. **Potential Improvements**: Suggestions for architectural improvements"""
-            )
-        else:
-            sections = (
-                base_sections
-                + """
-4. **Dependencies**: Internal and external dependencies
-5. **Interfaces**: Public APIs and interfaces exposed
-6. **Extensibility**: How the code can be extended or modified
-7. **Design Principles**: SOLID principles, separation of concerns, etc.
-8. **Potential Improvements**: Suggestions for architectural improvements"""
-            )
-
-        # Add Mermaid guidelines if diagrams are enabled
-        mermaid_guidelines = ""
-        if include_diagrams:
-            mermaid_guidelines = """
-
-## CRITICAL MERMAID RULES - FOLLOW EXACTLY OR FAIL
-
-**STEP 1: START YOUR DIAGRAM**
-Write exactly: ```mermaid
-
-**STEP 2: WRITE MAXIMUM 6 NODES**
-Example:
-flowchart TD
-    A[Start] --> B[Process]
-    B --> C[End]
-
-**STEP 3: END YOUR DIAGRAM**
-Write exactly: ```
-DO NOT WRITE ANYTHING ELSE ON THIS LINE
-
-**ABSOLUTE PROHIBITIONS:**
-- NEVER write more than 6 nodes (A, B, C, D, E, F)
-- NEVER write ```text anywhere
-- NEVER write anything after the closing ```
-- NEVER create infinite loops
-- NEVER repeat the same pattern
-
-**CORRECT EXAMPLE:**
-```mermaid
-flowchart TD
-    A[Input] --> B[Process]
-    B --> C[Output]
-```
-
-**WRONG EXAMPLES - DO NOT DO THIS:**
-❌ ```mermaid
-flowchart TD
-    A[Input] --> B[Process]
-```text  ← NEVER DO THIS
-
-❌ Missing closing ```
-
-❌ More than 6 nodes
-
-**IF YOU VIOLATE THESE RULES, THE DIAGRAM WILL BREAK**"""
-
-        prompt = f"""You are a software architect analyzing code structure. Provide a detailed architectural analysis of the following {language} code.
-
-Focus on:
-
-{sections}
-{mermaid_guidelines}
-
-Follow markdown formatting rules:
-
-- Use ## headers for main sections, ### for subsections
-- Surround all lists with blank lines before and after
-- Use only single blank lines between sections
-- Avoid duplicate section headings
-- FORBIDDEN: Never use ```text anywhere in the response
-- FORBIDDEN: Do not add any text after closing code blocks with ```
-{("- Place the Mermaid diagram in a proper code block with ```mermaid" if include_diagrams else "")}
-
-**File Path**: `{file_path}`
-
-**Code**:
-```{language}
-{code}
-```
-
-Provide the architectural analysis{(" with Mermaid diagram" if include_diagrams else "")}:"""
-
+        # Build prompt using prompt manager
+        prompt = self.prompt_manager.build_architecture_prompt(
+            code, file_path, **kwargs
+        )
         return self._generate_text(prompt)
-
-    def _detect_language(self, file_extension: str) -> str:
-        """Detect programming language from file extension."""
-        language_map = {
-            ".py": "python",
-            ".js": "javascript",
-            ".ts": "typescript",
-            ".jsx": "jsx",
-            ".tsx": "tsx",
-            ".cpp": "cpp",
-            ".cc": "cpp",
-            ".cxx": "cpp",
-            ".c": "c",
-            ".h": "c",
-            ".hpp": "cpp",
-            ".java": "java",
-            ".go": "go",
-            ".rs": "rust",
-            ".rb": "ruby",
-            ".php": "php",
-            ".cs": "csharp",
-            ".swift": "swift",
-            ".kt": "kotlin",
-            ".scala": "scala",
-            ".r": "r",
-        }
-        return language_map.get(file_extension.lower(), "text")
 
     def is_available(self) -> bool:
         """Check if the model is available and ready to use."""
@@ -576,7 +415,7 @@ Provide the architectural analysis{(" with Mermaid diagram" if include_diagrams 
             "available": self.is_available(),
             "temperature": self.temperature,
             "max_tokens": self.max_tokens,
-            "quantization": self.quantization if not self.is_mac else "8bit (MLX)",
+            "quantization": (self.quantization if not self.is_mac else "8bit (MLX)"),
             "offline_mode": self.offline_mode,
             "check_for_updates": self.check_for_updates,
             "local_files_only": self.local_files_only,

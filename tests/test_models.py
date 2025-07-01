@@ -192,22 +192,6 @@ class TestDeepSeekCoderModel(unittest.TestCase):
             self.assertEqual(info["backend"], "mlx")
             self.assertEqual(info["platform"], "Darwin")
 
-    @patch("docgenai.models.platform.system")
-    def test_detect_language(self, mock_system):
-        """Test language detection from file extension."""
-        mock_system.return_value = "Darwin"
-
-        with patch("docgenai.models.DeepSeekCoderModel._initialize_model"):
-            model = DeepSeekCoderModel(self.test_config)
-
-            # Test various file extensions
-            self.assertEqual(model._detect_language(".py"), "python")
-            self.assertEqual(model._detect_language(".js"), "javascript")
-            self.assertEqual(model._detect_language(".ts"), "typescript")
-            self.assertEqual(model._detect_language(".cpp"), "cpp")
-            self.assertEqual(model._detect_language(".java"), "java")
-            self.assertEqual(model._detect_language(".unknown"), "text")
-
 
 class TestCreateModel(unittest.TestCase):
     """Tests for the create_model factory function."""
