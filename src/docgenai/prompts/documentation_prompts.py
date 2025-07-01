@@ -66,6 +66,7 @@ The documentation should include:
 {code}
 ```
 
-Provide the documentation:"""
+Write the documentation directly without any markdown code block wrappers.
+Start immediately with the first section (## Overview):"""
 
         return prompt

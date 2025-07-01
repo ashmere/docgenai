@@ -23,10 +23,10 @@ following these rules:
         - Avoid adding text immediately after closing code blocks
 """
 
-    # Common prohibitions for all prompts
-    COMMON_PROHIBITIONS = """
-- FORBIDDEN: Never use ```text anywhere in the response
-- FORBIDDEN: Do not add any text after closing code blocks with ```
+    # Common guidelines for all prompts
+    COMMON_GUIDELINES = """
+- Never use ```text anywhere in the response
+- Do not add any text immediately after closing code blocks with ```
 """
 
     @staticmethod
