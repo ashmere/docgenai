@@ -46,8 +46,8 @@ def cli(ctx, config, verbose):
     DocGenAI: AI-powered code documentation generator.
 
     Uses DeepSeek-Coder models with platform-specific optimization:
-    - macOS: MLX-optimized DeepSeek-Coder-V2-Lite-Instruct-8bit
-    - Linux/Windows: DeepSeek-Coder-V2-Lite-Instruct with quantization
+    - macOS: MLX-optimized model (configured in config.yaml)
+    - Linux/Windows: Transformers model with quantization (configured in config.yaml)
     """
     # Load configuration
     try:

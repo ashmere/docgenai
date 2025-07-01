@@ -24,7 +24,7 @@ def get_default_config() -> Dict[str, Any]:
     return {
         "model": {
             # Platform-aware model selection
-            "mlx_model": "mlx-community/DeepSeek-Coder-V2-Lite-Instruct-8bit",
+            "mlx_model": "mlx-community/DeepSeek-Coder-V2-Lite-Instruct-4bit",
             "transformers_model": ("deepseek-ai/DeepSeek-Coder-V2-Lite-Instruct"),
             # Generation parameters
             "temperature": 0.7,

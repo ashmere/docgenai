@@ -86,8 +86,8 @@ class DeepSeekCoderModel(AIModel):
     """
     DeepSeek-Coder-V2-Lite model implementation with platform detection.
 
-    - macOS: Uses mlx-lm with DeepSeek-Coder-V2-Lite-Instruct-8bit
-    - Linux/Windows: Uses transformers with DeepSeek-Coder-V2-Lite-Instruct
+    - macOS: Uses mlx-lm with model specified in config (mlx_model)
+    - Linux/Windows: Uses transformers with model specified in config (transformers_model)
     """
 
     def __init__(self, config: Optional[Dict[str, Any]] = None):
@@ -108,15 +108,20 @@ class DeepSeekCoderModel(AIModel):
 
         # Model paths based on platform and config
         if self.is_mac:
-            self.model_path = model_config.get(
-                "mlx_model", "mlx-community/DeepSeek-Coder-V2-Lite-Instruct-8bit"
-            )
+            self.model_path = model_config.get("mlx_model")
             self.backend = "mlx"
+            if not self.model_path:
+                raise ValueError(
+                    "mlx_model must be specified in configuration for macOS"
+                )
         else:
-            self.model_path = model_config.get(
-                "transformers_model", "deepseek-ai/DeepSeek-Coder-V2-Lite-Instruct"
-            )
+            self.model_path = model_config.get("transformers_model")
             self.backend = "transformers"
+            if not self.model_path:
+                raise ValueError(
+                    "transformers_model must be specified in configuration "
+                    "for Linux/Windows"
+                )
 
         # Generation parameters from config
         self.temperature = model_config.get("temperature", 0.7)
