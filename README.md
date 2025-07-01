@@ -47,6 +47,141 @@ poetry run docgenai generate src/models.py --no-output-cache
 poetry run docgenai info
 ```
 
+## 🔗 Prompt Chaining Strategies
+
+DocGenAI supports advanced prompt chaining for enhanced documentation quality. Chaining breaks documentation generation into multiple focused steps, allowing the AI to build understanding progressively.
+
+### Available Strategies
+
+#### **Simple** (Default)
+
+- **Steps**: 1 step - Direct documentation generation
+- **Behavior**: Identical to current system (backward compatible)
+- **Use case**: Quick documentation, existing workflows
+- **Performance**: Fastest (~17s per file on Apple Silicon)
+
+#### **Enhanced**
+
+- **Steps**: 3 steps - Analyze → Document → Enhance
+- **Process**:
+  1. **Analyze**: Code structure and pattern identification
+  2. **Document**: Generate comprehensive documentation
+  3. **Enhance**: Refine with additional insights and examples
+- **Use case**: Higher quality documentation with deeper analysis
+- **Performance**: ~3x slower but potentially much better quality
+
+#### **Architecture**
+
+- **Steps**: 4 steps - Analyze → Describe → Diagram → Combine
+- **Process**:
+  1. **Architectural Analysis**: Deep system architecture analysis
+  2. **Text Description**: Detailed architectural descriptions
+  3. **Diagram Specification**: Generate Mermaid diagram specs
+  4. **Combined Documentation**: Merge text and diagrams
+- **Use case**: Complex systems needing architectural docs with diagrams
+- **Performance**: Slowest but most comprehensive output
+
+### Usage Examples
+
+#### Basic Chaining Commands
+
+```bash
+# Use simple strategy (default - same as current behavior)
+poetry run docgenai generate src/models.py
+
+# Enable enhanced strategy for better quality
+poetry run docgenai generate src/models.py --chain --chain-strategy enhanced
+
+# Generate architectural documentation with diagrams
+poetry run docgenai generate src/core.py --chain --chain-strategy architecture
+
+# Process entire directory with enhanced strategy
+poetry run docgenai generate src/ --chain --chain-strategy enhanced --output-dir docs
+```
+
+#### Configuration-Based Usage
+
+Enable chaining by default in `config.yaml`:
+
+```yaml
+chaining:
+  enabled: true
+  default_strategy: "enhanced"  # or "simple", "architecture"
+  max_steps: 10
+  timeout_per_step: 300
+  fail_fast: true
+```
+
+Then use normally:
+
+```bash
+# Will use enhanced strategy from config
+poetry run docgenai generate src/models.py
+
+# Override config strategy
+poetry run docgenai generate src/models.py --chain-strategy architecture
+
+# Disable chaining for this run
+poetry run docgenai generate src/models.py --no-chain
+```
+
+#### Advanced Chaining Options
+
+```bash
+# Enhanced strategy with custom timeout
+poetry run docgenai generate large_file.py --chain --chain-strategy enhanced
+
+# Architecture strategy for complex systems
+poetry run docgenai generate src/core.py --chain --chain-strategy architecture
+
+# Simple strategy (explicit)
+poetry run docgenai generate src/utils.py --chain --chain-strategy simple
+```
+
+### When to Use Each Strategy
+
+| Strategy | Best For | Output Quality | Speed | Use Cases |
+|----------|----------|----------------|--------|-----------|
+| **Simple** | Quick docs, CI/CD, large codebases | Good | Fastest | Existing workflows, bulk processing |
+| **Enhanced** | Production documentation | Better | 3x slower | Important modules, public APIs |
+| **Architecture** | System documentation | Best | 4x slower | Core systems, complex architectures |
+
+### Strategy Comparison Example
+
+For the same `src/models.py` file:
+
+**Simple Strategy Output:**
+
+- Standard documentation with classes, methods, usage
+- ~17 seconds generation time
+
+**Enhanced Strategy Output:**
+
+- All simple content PLUS:
+- Deeper analysis of design patterns
+- More comprehensive usage examples
+- Performance considerations
+- Best practices recommendations
+- ~50 seconds generation time
+
+**Architecture Strategy Output:**
+
+- All enhanced content PLUS:
+- Architectural analysis and diagrams
+- System interaction flows
+- Component relationship diagrams
+- Design decision explanations
+- ~70 seconds generation time
+
+### Performance Impact
+
+| Platform | Simple | Enhanced | Architecture |
+|----------|--------|----------|--------------|
+| **macOS (MLX)** | ~17s | ~50s | ~70s |
+| **Linux (Docker)** | ~30s | ~90s | ~120s |
+
+*Times are estimates for typical Python files on tested platforms*
+
 ## Platform Optimization
 
 DocGenAI automatically detects your platform and uses the optimal model backend:
@@ -153,22 +288,31 @@ model:
 - **Memory Usage**: 8-12GB peak
 - **Download Size**: ~3GB (AWQ model)
 
-## Usage Examples
+## Command Examples
 
 ### Documentation Generation
 
 ```bash
-# Single file with architecture analysis
+# Single file with default (simple) strategy
 poetry run docgenai generate src/models.py
 
-# Directory processing
-poetry run docgenai generate src/ --output-dir documentation
+# Enhanced documentation with multi-step chaining
+poetry run docgenai generate src/models.py --chain --chain-strategy enhanced
 
-# Exclude architecture analysis for faster processing
+# Architectural documentation with diagrams
+poetry run docgenai generate src/core.py --chain --chain-strategy architecture
+
+# Directory processing with enhanced strategy
+poetry run docgenai generate src/ --output-dir documentation --chain --chain-strategy enhanced
+
+# Exclude architecture analysis for faster processing (legacy option)
 poetry run docgenai generate large_project/ --no-architecture
 
 # Force regeneration without cache
 poetry run docgenai generate src/core.py --no-output-cache
+
+# Combine chaining with cache bypass
+poetry run docgenai generate src/models.py --chain --chain-strategy enhanced --no-output-cache
 ```
 
 ### Cache Management

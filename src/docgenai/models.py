@@ -50,6 +50,11 @@ class AIModel(ABC):
         pass
 
     @abstractmethod
+    def generate_raw_response(self, prompt: str, **kwargs) -> str:
+        """Generate raw response from the model given a prompt."""
+        pass
+
+    @abstractmethod
     def is_available(self) -> bool:
         """Check if the model is available and ready to use."""
         pass
@@ -405,6 +410,15 @@ class DeepSeekCoderModel(AIModel):
             code, file_path, **kwargs
         )
         return self._generate_text(prompt)
+
+    def generate_raw_response(self, prompt: str, **kwargs) -> str:
+        """Generate raw response from the model given a prompt."""
+        logger.info("🔄 Generating raw response")
+
+        # Extract max_tokens if provided in kwargs
+        max_tokens = kwargs.get("max_tokens", None)
+
+        return self._generate_text(prompt, max_tokens)
 
     def is_available(self) -> bool:
         """Check if the model is available and ready to use."""

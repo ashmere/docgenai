@@ -2,63 +2,74 @@
 
 ## Overview
 
-This code provides a system for generating detailed architectural analysis prompts from source code. It is designed to help software architects and developers understand the structure and design of the code by analyzing various aspects such as architectural patterns, code organization, data flow, dependencies, interfaces, extensibility, design principles, and potential improvements.
+This code defines a `ArchitecturePromptBuilder` class within the `docgenai` module, which is responsible for building architecture analysis prompts based on the provided source code and file path. The class inherits from `BasePromptBuilder` and includes a `build_prompt` method that constructs a detailed architectural analysis prompt tailored to the programming language of the provided code.
+The method supports optional language specification, with auto-detection based on the file extension if not provided.
 
 ## Key Components
 
-- **ArchitecturePromptBuilder**: Main class responsible for building architecture analysis prompts.
+- **ArchitecturePromptBuilder**: The main class responsible for constructing architecture analysis prompts.
 
-- **build_prompt**: Function that constructs the prompt based on the provided source code and file path.
+- **build_prompt**: A method that generates a detailed architectural analysis prompt based on the provided source code and file path.
+
+- **get_language_from_extension**: A helper method to determine the programming language from the file extension if not explicitly provided.
 
 ## Architecture
 
-The `ArchitecturePromptBuilder` class uses the `BasePromptBuilder` as a base class, inheriting methods and properties for building prompts. The `build_prompt` function takes the source code, file path, and optionally the programming language, and constructs a detailed architectural analysis prompt using the provided information.
+The `ArchitecturePromptBuilder` class operates by first detecting the programming language from the file extension if not specified, then constructing a detailed architectural analysis prompt by analyzing the provided source code.
+The analysis focuses on aspects such as architectural patterns, code organization, data flow, dependencies, interfaces, extensibility, design principles, and potential improvements.
 
 ## Usage Examples
 
-To use the `ArchitecturePromptBuilder` class, you would typically initialize it with a base prompt builder and then call the `build_prompt` method with the code and file path of the source file you wish to analyze. Here's a simple example:
+To use the `ArchitecturePromptBuilder` class, you would typically create an instance of it and call the `build_prompt` method with the appropriate arguments. Here's a simple example:
 
 ```python
-from pathlib import Path
 from docgenai.prompts import ArchitecturePromptBuilder
 
-# Initialize the builder
+# Create an instance of ArchitecturePromptBuilder
 
 builder = ArchitecturePromptBuilder()
 
 # Path to the source code file
 
-file_path = "path/to/your/code.py"
+file_path = 'path/to/your/code.py'
 
 # Read the source code from the file
 
-with open(file_path, "r") as file:
+with open(file_path, 'r') as file:
     code = file.read()
 
-# Build the prompt
+# Build the architecture analysis prompt
 
 prompt = builder.build_prompt(code, file_path)
 print(prompt)
+
+This example demonstrates how to instantiate the `ArchitecturePromptBuilder`, read the source code from a file, and generate an architecture analysis prompt.
 
 ```
 
 ## Dependencies
 
-- **pathlib**: Standard library for file system path manipulation.
+- **pathlib**: Used for file path manipulation.
 
-- **BasePromptBuilder**: Custom module for building base prompts, assumed to be defined elsewhere in the project.
+- **BasePromptBuilder**: Inherits from this base class to leverage its functionality.
 
 ## Configuration
 
-- **language**: Optional parameter for specifying the programming language of the source code. If not provided, it will be auto-detected from the file extension.
+- **Language Auto-Detection**: The `get_language_from_extension` method automatically detects the programming language based on the file extension.
+
+- **Prompt Customization**: The `build_prompt` method supports customization of the prompt through additional keyword arguments if needed.
 
 ## Error Handling
 
-- The `build_prompt` function raises a `ValueError` if the provided `file_path` does not exist or if the `code` is not a valid string.
+- The `build_prompt` method raises a `ValueError` if the provided `file_path` does not exist or if the `code` is not a valid string.
+
+- Error details are logged, and user-friendly messages are provided to guide the user in resolving the issue.
 
 ## Performance Considerations
 
-- The performance of this system is dependent on the size of the code and the efficiency of the `get_language_from_extension` method. For large codebases, optimizing this method or using a cached result could improve performance.
+- The performance of the `build_prompt` method is dependent on the size of the provided code and the efficiency of the language detection mechanism.
+
+- For large codebases, consider optimizing the language detection mechanism or using pre-defined language profiles to speed up the process.
 
 ## Architecture Analysis
 
@@ -68,41 +79,41 @@ The code does not explicitly use any known design patterns such as MVC, Observer
 
 ## Code Organization
 
-The code is organized into a single file, `architecture_prompts.py`, which contains the `ArchitecturePromptBuilder` class and its methods. The class inherits from `BasePromptBuilder`, indicating a potential for modularity and reuse of functionality.
+The code is organized into a single file `architecture_prompts.py` within the `src/docgenai/prompts` directory. The file contains a single class `ArchitecturePromptBuilder` which is responsible for building architecture analysis prompts.
 
 ## Data Flow
 
-The data flow in this code is straightforward. The `build_prompt` method takes `code`, `file_path`, and `language` as arguments, processes them, and returns a formatted string containing the architectural analysis.
+The data flow in this code is straightforward. The `build_prompt` method takes a code string, a file path, and optional language arguments, and returns a formatted string containing the architectural analysis.
 
 ## Dependencies (2)
 
-- **Internal Dependencies**: The `ArchitecturePromptBuilder` class depends on the `BasePromptBuilder` class for its base functionality.
+- **Internal Dependencies**: The `ArchitecturePromptBuilder` class depends on the `BasePromptBuilder` class from the same module.
 
 - **External Dependencies**: The code does not depend on any external libraries or frameworks.
 
 ## Interfaces
 
-The public interface exposed by the `ArchitecturePromptBuilder` class includes the `build_prompt` method, which is the primary way to interact with the class for generating architectural analysis prompts.
+The public interface exposed by this code is the `build_prompt` method of the `ArchitecturePromptBuilder` class.
 
 ## Extensibility
 
-The code is designed to be extensible. The `build_prompt` method is flexible and can be extended to include more detailed analysis or additional features in future versions.
+The code is designed to be easily extensible. Adding new features or modifying the existing ones would typically involve adding new methods or modifying the existing ones in the `ArchitecturePromptBuilder` class.
 
 ## Design Principles
 
-- **SOLID Principles**: The code adheres to the Single Responsibility Principle by having a single responsibility (building architecture analysis prompts).
+- **SOLID Principles**: The code adheres to the Single Responsibility Principle by having a single class responsible for building architecture analysis prompts.
 
-- **Separation of Concerns**: The concerns of code organization, prompt building, and language detection are separated into distinct components.
+- **Separation of Concerns**: The responsibilities are well-separated, with the `ArchitecturePromptBuilder` class handling only the prompt building logic.
 
 ## Potential Improvements
 
-1. **Design Patterns**: Consider incorporating design patterns to enhance the structure and functionality of the code.
+1. **Design Patterns**: Consider incorporating a design pattern to enhance the flexibility and maintainability of the code.
 
-2. **Error Handling**: Implement error handling to manage potential issues with input code or file paths.
+2. **Code Comments**: Adding comments to explain complex parts of the code would improve readability and maintainability.
 
-3. **Language Detection**: Improve language detection mechanism to handle more programming languages accurately.
+3. **Error Handling**: Implementing error handling for potential issues in the code, such as invalid inputs, would make the system more robust.
 
-This analysis provides a clear understanding of the code's structure and functionality, highlighting both its strengths and areas for potential improvement.
+This analysis provides a detailed overview of the code's architecture, focusing on the aspects that contribute to its design and functionality.
 
 ---
 

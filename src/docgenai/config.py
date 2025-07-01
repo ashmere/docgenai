@@ -176,6 +176,16 @@ def get_default_config() -> Dict[str, Any]:
             "gitbook": {"enabled": False, "api_key": ""},
             "confluence": {"enabled": False, "base_url": "", "api_key": ""},
         },
+        "chaining": {
+            "enabled": False,  # Disabled by default for backward compatibility
+            "default_strategy": "simple",  # "simple", "enhanced", "architecture"
+            "max_steps": 10,
+            "timeout_per_step": 300,
+            "fail_fast": True,
+            "parallel_execution": False,  # Future feature
+            "retry_failed_steps": False,
+            "log_step_outputs": False,  # For debugging
+        },
         "experimental": {
             "interactive_mode": False,
             "ai_suggestions": False,

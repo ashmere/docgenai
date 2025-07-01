@@ -249,6 +249,18 @@ integrations:
     base_url: ""                    # Confluence base URL
     api_key: ""                     # Confluence API key (use env var)
 
+# Prompt Chaining Configuration
+chaining:
+  # Multi-step AI generation settings
+  enabled: false                    # Disabled by default for backward compatibility
+  default_strategy: "simple"        # Options: "simple", "enhanced", "architecture"
+  max_steps: 10                     # Maximum steps in a chain
+  timeout_per_step: 300             # Timeout per step in seconds
+  fail_fast: true                   # Stop execution on first step failure
+  parallel_execution: false         # Future feature for parallel step execution
+  retry_failed_steps: false         # Retry failed steps automatically
+  log_step_outputs: false           # Log individual step outputs for debugging
+
 # Experimental Features
 experimental:
   # Future features (not yet implemented)

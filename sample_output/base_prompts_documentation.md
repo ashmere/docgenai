@@ -2,15 +2,15 @@
 
 ## Overview
 
-This code defines a base class `BasePromptBuilder` for creating prompt templates in a structured manner, suitable for use in the DocGenAI application. The class includes shared formatting rules for Markdown documentation and a method to detect the programming language from a file extension. Subclasses can implement the `build_prompt` method to customize the prompt creation process.
+This code defines a base class `BasePromptBuilder` for creating prompt templates in a structured manner, suitable for use in the DocGenAI application. The class includes shared formatting rules and a method to detect the programming language from a file extension. Subclasses can implement the `build_prompt` method to customize the prompt creation process.
 
 ## Key Components
 
-- **BasePromptBuilder**: The main class that provides shared formatting rules and a method to detect programming language from file extensions.
+- **BasePromptBuilder**: The main class that provides shared formatting rules and a method to detect the programming language from a file extension.
 
 - **MARKDOWN_FORMATTING_RULES**: A class attribute containing Markdown formatting rules applicable to all documentation.
 
-- **COMMON_GUIDELINES**: A class attribute containing common guidelines for all prompts.
+- **COMMON_GUIDELINES**: A class attribute containing common guidelines applicable to all prompts.
 
 - **get_language_from_extension**: A static method that maps file extensions to their corresponding programming languages.
 
@@ -18,7 +18,8 @@ This code defines a base class `BasePromptBuilder` for creating prompt templates
 
 ## Architecture
 
-The `BasePromptBuilder` class is designed to be a base class for creating prompt templates. It includes shared formatting rules and a method to detect the programming language from a file extension. Subclasses can utilize these shared resources to build prompts tailored to their specific needs.
+The `BasePromptBuilder` class is designed to be a base class for creating prompt templates. It includes shared formatting rules and a method to detect the programming language from a file extension. Subclasses can implement the `build_prompt` method to customize the prompt creation process.
+The `get_language_from_extension` method helps in identifying the appropriate programming language for the documentation.
 
 ## Usage Examples
 
@@ -27,27 +28,26 @@ Here's an example of how to use the `BasePromptBuilder` class to build a prompt:
 ```python
 class MyPromptBuilder(BasePromptBuilder):
     def build_prompt(self, **kwargs) -> str:
-        prompt = f"# {kwargs.get('title', 'Default Title')}\n\n"
-        prompt += kwargs.get('content', 'No content provided.')
-        return prompt
+        # Custom implementation of build_prompt
+        pass
 
 # Instantiate the subclass
 
-builder = MyPromptBuilder()
-prompt = builder.build_prompt(title="Sample Prompt", content="This is a sample prompt.")
-print(prompt)
+prompt_builder = MyPromptBuilder()
+language = prompt_builder.get_language_from_extension(".py")
+print(f"Detected language: {language}")
 
-In this example, `MyPromptBuilder` is a subclass of `BasePromptBuilder` that overrides the `build_prompt` method to include a title and content in the prompt.
+In this example, `MyPromptBuilder` is a subclass of `BasePromptBuilder` that implements the `build_prompt` method. The `get_language_from_extension` method is used to detect the programming language from the file extension `.py`.
 
 ```
 
 ## Dependencies
 
-This code does not depend on any external libraries or modules beyond standard Python libraries.
+This code does not depend on any external libraries or modules. It is a standalone implementation for building prompt templates in DocGenAI.
 
 ## Configuration
 
-No configuration options or environment variables are required for this code to function.
+No configuration options or environment variables are required for this code.
 
 ## Error Handling
 
@@ -55,19 +55,19 @@ Errors are handled by raising `NotImplementedError` in the `build_prompt` method
 
 ## Performance Considerations
 
-The `get_language_from_extension` method is designed to be efficient and should handle a wide variety of file extensions quickly and reliably. The `build_prompt` method, being abstract, does not have a direct impact on performance but must be optimized by subclasses to meet the needs of their specific use case.
+The `get_language_from_extension` method is a static method that maps file extensions to programming languages. It is efficient and should not pose performance issues for typical use cases. The `build_prompt` method, being abstract, must be implemented by subclasses to handle prompt creation, and it should be optimized for performance based on the specific requirements of the prompts.
 
 ## Overview (2)
 
-This code defines a base class `BasePromptBuilder` for creating prompt templates in a structured manner, suitable for use in the DocGenAI application. The class includes shared formatting rules for Markdown documentation and a method to detect the programming language from a file extension. Subclasses can implement the `build_prompt` method to customize the prompt creation process.
+This code defines a base class `BasePromptBuilder` for creating prompt templates in a structured manner, suitable for use in the DocGenAI application. The class includes shared formatting rules and a method to detect the programming language from a file extension. Subclasses can implement the `build_prompt` method to customize the prompt creation process.
 
 ## Key Components (2)
 
-- **BasePromptBuilder**: The main class that provides shared formatting rules and a method to detect programming language from file extensions.
+- **BasePromptBuilder**: The main class that provides shared formatting rules and a method to detect the programming language from a file extension.
 
 - **MARKDOWN_FORMATTING_RULES**: A class attribute containing Markdown formatting rules applicable to all documentation.
 
-- **COMMON_GUIDELINES**: A class attribute containing common guidelines for all prompts.
+- **COMMON_GUIDELINES**: A class attribute containing common guidelines applicable to all prompts.
 
 - **get_language_from_extension**: A static method that maps file extensions to their corresponding programming languages.
 
@@ -75,38 +75,36 @@ This code defines a base class `BasePromptBuilder` for creating prompt templates
 
 ## Architecture (2)
 
-The `BasePromptBuilder` class is designed to be a base class for creating prompt templates. It includes shared formatting rules and a method to detect the programming language from a file extension. Subclasses can utilize these shared resources to build prompts tailored to their specific needs.
+The `BasePromptBuilder` class is designed to be a base class for creating prompt templates. It includes shared formatting rules and a method to detect the programming language from a file extension. Subclasses can implement the `build_prompt` method to customize the prompt creation process.
+The `get_language_from_extension` method helps in identifying the appropriate programming language for the documentation.
 
 ## Usage Examples (2)
 
 Here's an example of how to use the `BasePromptBuilder` class to build a prompt:
 
 ```python
-
-```python
 class MyPromptBuilder(BasePromptBuilder):
     def build_prompt(self, **kwargs) -> str:
-        prompt = f"# {kwargs.get('title', 'Default Title')}\n\n"
-        prompt += kwargs.get('content', 'No content provided.')
-        return prompt
+        # Custom implementation of build_prompt
+        pass
 
 # Instantiate the subclass (2)
 
-builder = MyPromptBuilder()
-prompt = builder.build_prompt(title="Sample Prompt", content="This is a sample prompt.")
-print(prompt)
+prompt_builder = MyPromptBuilder()
+language = prompt_builder.get_language_from_extension(".py")
+print(f"Detected language: {language}")
 
-In this example, `MyPromptBuilder` is a subclass of `BasePromptBuilder` that overrides the `build_prompt` method to include a title and content in the prompt.
+In this example, `MyPromptBuilder` is a subclass of `BasePromptBuilder` that implements the `build_prompt` method. The `get_language_from_extension` method is used to detect the programming language from the file extension `.py`.
 
 ```
 
 ## Dependencies (2)
 
-This code does not depend on any external libraries or modules beyond standard Python libraries.
+This code does not depend on any external libraries or modules. It is a standalone implementation for building prompt templates in DocGenAI.
 
 ## Configuration (2)
 
-No configuration options or environment variables are required for this code to function.
+No configuration options or environment variables are required for this code.
 
 ## Error Handling (2)
 
@@ -114,7 +112,7 @@ Errors are handled by raising `NotImplementedError` in the `build_prompt` method
 
 ## Performance Considerations (2)
 
-The `get_language_from_extension` method is designed to be efficient and should handle a wide variety of file extensions quickly and reliably. The `build_prompt` method, being abstract, does not have a direct impact on performance but must be optimized by subclasses to meet the needs of their specific use case.
+The `get_language_from_extension` method is a static method that maps file extensions to programming languages. It is efficient and should not pose performance issues for typical use cases. The `build_prompt` method, being abstract, must be implemented by subclasses to handle prompt creation, and it should be optimized for performance based on the specific requirements of the prompts.
 
 ## Architecture Analysis
 
@@ -123,62 +121,54 @@ The `get_language_from_extension` method is designed to be efficient and should 
 ### 1. Architectural Patterns
 
 The provided code does not explicitly use a known design pattern such as MVC (Model-View-Controller), Observer, Factory, or others. It is a straightforward implementation of a base class with static methods and a method that raises an error if not overridden by a subclass.
-This structure is typical for a base class in an object-oriented design, where the methods are meant to be overridden by specific implementations for different use cases.
+This structure is typical for a base class in an object-oriented design, where the methods are meant to be overridden by subclasses to provide specific functionality.
 
 ### 2. Code Organization
 
-The code is organized into a single file, `base_prompts.py`, which contains a base class `BasePromptBuilder` with static attributes and methods. This organization is simple and directly reflects the responsibilities of the class, which is to provide shared functionality for building prompts with specific formatting rules.
+The code is organized into a single file, `base_prompts.py`, which contains a base class `BasePromptBuilder` with static attributes and methods. The class includes constants for Markdown formatting rules and common guidelines for all prompts. The `get_language_from_extension` method is static and uses a dictionary to map file extensions to programming languages.
+The `build_prompt` method is abstract and must be overridden by subclasses.
 
 ### 3. Data Flow
 
-The data flow in this code is straightforward. The `BasePromptBuilder` class has a static method `get_language_from_extension` that maps file extensions to programming languages. This method is used to detect the language of a file based on its extension.
-The `build_prompt` method is abstract and must be overridden by subclasses, which indicates that data processing or transformation might occur in those subclasses.
+- **Inputs**: The `build_prompt` method expects keyword arguments (`**kwargs`) which are used to construct the prompt.
+
+- **Outputs**: The `build_prompt` method returns a string that represents the constructed prompt.
+
+- **Processing**: The `get_language_from_extension` method processes the file extension to determine the appropriate programming language for code examples.
 
 ### 4. Dependencies
 
-The code has no external dependencies other than standard Python libraries. The `get_language_from_extension` method uses a dictionary to map file extensions to language identifiers. This internal dependency on a static dictionary for data lookup is straightforward and does not pose significant challenges in terms of dependencies.
+- **Internal Dependencies**: The `BasePromptBuilder` class depends on itself for the `build_prompt` method, which is abstract and must be overridden by subclasses.
+
+- **External Dependencies**: The class does not depend on any external libraries or modules.
 
 ### 5. Interfaces
 
-The interfaces exposed by this code are limited to the `BasePromptBuilder` class, which includes:
+- **Public API**: The only public interface provided by the `BasePromptBuilder` class is the `build_prompt` method, which must be overridden by subclasses to provide specific functionality.
 
-- `MARKDOWN_FORMATTING_RULES`: A static attribute containing Markdown formatting rules.
-
-- `COMMON_GUIDELINES`: Another static attribute with common guidelines for all prompts.
-
-- `get_language_from_extension`: A static method to detect language from file extension.
-
-- `build_prompt`: An abstract method that must be overridden by subclasses to build prompts.
+- **Subclasses**: Subclasses must implement the `build_prompt` method to adhere to the abstract base class definition.
 
 ### 6. Extensibility
 
-The code is designed to be extensible. The `build_prompt` method is abstract and must be overridden by any subclass that needs to implement specific prompt-building logic. This design allows for future expansion without modifying the existing code, adhering to the open/closed principle of SOLID principles.
+The code is designed to be extensible. Subclasses can override the `build_prompt` method to customize the prompt construction process. This adheres to the open/closed principle, allowing for future modifications without changing the existing code.
 
 ### 7. Design Principles
 
-The code adheres to several design principles:
+- **SOLID Principles**: The `BasePromptBuilder` class follows the Single Responsibility Principle by encapsulating only the shared formatting rules and methods related to prompt construction. The Open/Closed Principle is followed by allowing subclasses to extend the functionality without modifying the base class.
 
-- **Single Responsibility Principle**: The `BasePromptBuilder` class has only one responsibility, which is to provide shared formatting rules and methods for building prompts.
-
-- **Open/Closed Principle**: The `BasePromptBuilder` class is open for extension (via overriding `build_prompt`) but closed for modification (the core logic does not change).
-
-- **Liskov Substitution Principle**: Subclasses of `BasePromptBuilder` can be used interchangeably wherever an instance of `BasePromptBuilder` is expected, as long as they adhere to the contract defined by the base class.
-
-- **Interface Segregation Principle**: The interface is not broken down into multiple segregated parts, but the methods defined in the base class are clear and specific to the task of building prompts.
-
-- **Dependency Inversion Principle**: The `BasePromptBuilder` class does not depend on lower-level modules directly; instead, it depends on abstractions (like the `get_language_from_extension` method).
+- **Separation of Concerns**: The code separates concerns related to prompt construction and Markdown formatting from the logic of detecting programming languages from file extensions.
 
 ### 8. Potential Improvements
 
-While the current implementation is straightforward and effective for its purpose, there are potential areas for improvement:
+- **Documentation**: Adding more detailed comments and docstrings, especially for the `build_prompt` method and the `get_language_from_extension` method, would improve the understandability of the code.
 
-- **Documentation**: Adding more detailed comments or docstrings for the `get_language_from_extension` method and `build_prompt` method would help developers understand the logic and usage better.
+- **Error Handling**: Implementing error handling in the `build_prompt` method and `get_language_from_extension` method would make the class more robust and resilient to unexpected inputs.
 
-- **Error Handling**: Adding error handling for unexpected inputs in `get_language_from_extension` and `build_prompt` methods could make the code more robust.
+- **Subclassing**: Providing more detailed examples or a default implementation for the `build_prompt` method in the `BasePromptBuilder` class could guide developers on how to use and extend the base class effectively.
 
-- **Subclassing**: Providing more detailed examples or a template for how to subclass `BasePromptBuilder` and implement `build_prompt` for specific use cases could be beneficial for users.
+## Conclusion
 
-Overall, the code is well-structured and follows good software design principles, making it easy to extend and maintain.
+The `BasePromptBuilder` class in `src/docgenai/prompts/base_prompts.py` is a basic implementation of an abstract base class in Python, suitable for use as a template for creating more specific prompt builders in subclasses. The design follows basic object-oriented principles and provides a clear interface for subclasses to implement specific prompt construction logic.
 
 ---
 

@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from .cache import CacheManager
+from .chaining import ChainBuilder, PromptChain
 from .config import (
     get_cache_config,
     get_generation_config,
@@ -53,6 +54,7 @@ class DocumentationGenerator:
         self.output_config = get_output_config(config)
         self.generation_config = get_generation_config(config)
         self.model_config = get_model_config(config)
+        self.chaining_config = config.get("chaining", {})
 
         # Initialize components
         self.cache_manager = CacheManager(self.cache_config)
@@ -61,6 +63,14 @@ class DocumentationGenerator:
         logger.info("🚀 DocumentationGenerator initialized")
         logger.info(f"📋 Model: {self.model.get_model_info()['model_path']}")
         logger.info(f"⚙️  Backend: {self.model.get_model_info()['backend']}")
+
+        # Log chaining status
+        chaining_enabled = self.chaining_config.get("enabled", False)
+        if chaining_enabled:
+            strategy = self.chaining_config.get("default_strategy", "simple")
+            logger.info(f"🔗 Chaining enabled: {strategy} strategy")
+        else:
+            logger.info("📝 Using single-step generation (chaining disabled)")
 
     def process_file(self, file_path: Path) -> Optional[str]:
         """
@@ -98,7 +108,23 @@ class DocumentationGenerator:
 
             if cached_result:
                 logger.info("💾 Using cached result")
-                return cached_result.get("output_file")
+                # Regenerate output file in current output directory
+                cached_doc = cached_result.get("documentation", "")
+                cached_arch = cached_result.get("architecture_description", "")
+
+                # Create context for current output directory
+                context = self._create_template_context(
+                    file_path, "", cached_doc, cached_arch
+                )
+
+                # Render template
+                rendered_doc = self.template_manager.render_documentation(context)
+                rendered_doc = clean_documentation_output(rendered_doc)
+
+                # Save to current output directory
+                output_path = self._save_documentation(file_path, rendered_doc)
+                logger.info(f"💾 Regenerated cached result to: {output_path}")
+                return output_path
 
             # Read source code
             logger.info("📖 Reading source code...")
@@ -218,17 +244,92 @@ class DocumentationGenerator:
                 logger.error(f"❌ Failed to process {file_path}: {str(e)}")
                 failed += 1
 
-        # Generate directory summary if enabled
+        # Always generate index for navigation
         if self.output_config.get("create_subdirs", True) and results:
-            summary_path = self._generate_directory_summary(dir_path, results)
-            if summary_path:
-                results.append(summary_path)
+            index_path = self._generate_index(dir_path)
+            if index_path:
+                results.append(index_path)
+
+            # Generate comprehensive summary only if chaining is enabled
+            chaining_config = self.config.get("chaining", {})
+            if chaining_config.get("enabled", False):
+                summary_path = self._generate_summary(dir_path, results)
+                if summary_path:
+                    results.append(summary_path)
 
         total_elapsed = time.time() - start_time
         logger.info(f"🎉 Directory processing complete in {total_elapsed:.2f} seconds")
         logger.info(f"📊 Results: {successful} successful, {failed} failed")
 
         return results
+
+    def execute_chain(
+        self, chain: PromptChain, code_content: str, file_path: str
+    ) -> Optional[str]:
+        """
+        Execute a prompt chain for documentation generation.
+
+        Args:
+            chain: PromptChain to execute
+            code_content: Source code content
+            file_path: Path to the source file
+
+        Returns:
+            Final documentation output, or None if failed
+        """
+        logger.info(f"🔗 Executing chain: {chain.name}")
+
+        # Prepare initial inputs
+        initial_inputs = {
+            "code": code_content,
+            "file_path": file_path,
+            "language": self._detect_language(Path(file_path).suffix),
+        }
+
+        # Create model function for the chain
+        def model_fn(prompt: str) -> str:
+            return self.model.generate_raw_response(prompt)
+
+        # Execute the chain
+        context = chain.execute(model_fn, initial_inputs)
+
+        # Check for successful completion
+        if context.failure_count > 0:
+            failed_steps = context.get_failed_steps()
+            logger.warning(
+                f"⚠️  Chain had {context.failure_count} failed steps: " f"{failed_steps}"
+            )
+
+            # If fail_fast is enabled and we have failures, return None
+            if chain.fail_fast and context.failure_count > 0:
+                logger.error("❌ Chain execution failed (fail_fast=True)")
+                return None
+
+        # Get the final output
+        # For simple chains, use the last successful step
+        # For complex chains, look for specific output steps
+        all_outputs = context.get_all_outputs()
+
+        if not all_outputs:
+            logger.error("❌ No successful outputs from chain")
+            return None
+
+        # Determine which output to use
+        if "combined_documentation" in all_outputs:
+            final_output = all_outputs["combined_documentation"]
+        elif "enhance" in all_outputs:
+            final_output = all_outputs["enhance"]
+        elif "documentation" in all_outputs:
+            final_output = all_outputs["documentation"]
+        else:
+            # Use the last successful output
+            final_output = list(all_outputs.values())[-1]
+
+        logger.info(
+            f"✅ Chain execution completed: {context.success_count} "
+            f"successful steps"
+        )
+        return final_output
 
     def _load_ignore_patterns(self, dir_path: Path) -> List[str]:
         """Load ignore patterns from .docgenai_ignore file."""
@@ -442,40 +543,52 @@ class DocumentationGenerator:
 
         return str(output_path)
 
-    def _generate_directory_summary(
-        self, dir_path: Path, result_files: List[str]
-    ) -> Optional[str]:
-        """Generate a summary document for the directory."""
+    def _generate_index(self, dir_path: Path) -> Optional[str]:
+        """Generate an index document for all documentation in the output directory."""
         try:
             output_dir = Path(self.output_config.get("dir", "output"))
-            summary_filename = f"{dir_path.name}_summary.md"
-            summary_path = output_dir / summary_filename
+            index_path = output_dir / "index.md"
 
-            # Create summary content
-            summary_content = f"""# Documentation Summary: {dir_path.name}
+            # Ensure output directory exists
+            output_dir.mkdir(parents=True, exist_ok=True)
+
+            # Find all markdown files in the output directory
+            all_docs = []
+            if output_dir.exists():
+                for md_file in output_dir.glob("*.md"):
+                    if md_file.name != "index.md":  # Don't include the index itself
+                        all_docs.append(md_file)
+
+            # Sort by name for consistent ordering
+            all_docs.sort(key=lambda x: x.name)
+
+            # Create index content
+            index_content = f"""# Documentation Index
 
 Generated on: {time.strftime("%Y-%m-%d %H:%M:%S")}
 
-## Processed Files
+## Available Documentation
 
 """
 
-            for result_file in result_files:
-                rel_path = Path(result_file).name
-                summary_content += f"- [{rel_path}](./{rel_path})\n"
+            if all_docs:
+                for doc_file in all_docs:
+                    # Create a readable name from filename
+                    display_name = doc_file.stem.replace("_", " ").title()
+                    if display_name.endswith(" Documentation"):
+                        # Remove " Documentation" suffix
+                        display_name = display_name[:-14]
 
-            summary_content += f"""
+                    index_content += f"- [{display_name}](./{doc_file.name})\n"
+            else:
+                index_content += "*No documentation files found.*\n"
+
+            index_content += f"""
 
 ## Statistics
 
-- Total files processed: {len(result_files)}
-- Generated documentation files: {len(result_files)}
-
-## Model Information
-
-- Model: {self.model.get_model_info()['model_path']}
-- Backend: {self.model.get_model_info()['backend']}
-- Platform: {self.model.get_model_info()['platform']}
+- Total documentation files: {len(all_docs)}
+- Last updated: {time.strftime("%Y-%m-%d %H:%M:%S")}
 
 ---
 
@@ -483,17 +596,110 @@ Generated on: {time.strftime("%Y-%m-%d %H:%M:%S")}
 """
 
             # Apply post-processing to clean up formatting
-            summary_content = clean_documentation_output(summary_content)
+            index_content = clean_documentation_output(index_content)
+
+            # Save index
+            with open(index_path, "w", encoding="utf-8") as f:
+                f.write(index_content)
+
+            logger.info(f"📋 Documentation index saved: {index_path}")
+            return str(index_path)
+
+        except Exception as e:
+            logger.error(f"❌ Failed to generate documentation index: {str(e)}")
+            return None
+
+    def _generate_summary(
+        self, dir_path: Path, result_files: List[str]
+    ) -> Optional[str]:
+        """Generate a comprehensive architectural summary using prompt chaining."""
+        try:
+            output_dir = Path(self.output_config.get("dir", "output"))
+            summary_path = output_dir / "summary.md"
+
+            # Collect all source code content for analysis
+            source_files = self._find_source_files(dir_path)
+            all_code_content = {}
+
+            # Limit to first 10 files to avoid token limits
+            for file_path in source_files[:10]:
+                try:
+                    with open(file_path, "r", encoding="utf-8") as f:
+                        content = f.read()
+                        rel_path = str(file_path.relative_to(dir_path))
+                        all_code_content[rel_path] = content
+                except Exception as e:
+                    logger.warning(f"⚠️  Could not read {file_path}: {e}")
+                    continue
+
+            if not all_code_content:
+                logger.warning(
+                    "⚠️  No source code content available for summary generation"
+                )
+                return None
+
+            # Determine chain strategy - prefer architecture, fallback to enhanced
+            chaining_config = self.config.get("chaining", {})
+            strategy = chaining_config.get("default_strategy", "enhanced")
+            if strategy == "simple":
+                strategy = "enhanced"  # Upgrade simple to enhanced for summary
+
+            # Create appropriate chain for summary generation
+            from .chaining import ChainBuilder
+
+            builder = ChainBuilder()
+
+            if strategy == "architecture":
+                chain = builder.architecture_diagram_chain()
+            else:
+                chain = builder.enhanced_documentation_chain()
+
+            # Prepare combined code content for chain input
+            combined_content = f"""# Codebase Overview: {dir_path.name}
+
+## Project Structure
+Files analyzed: {len(all_code_content)}
+
+"""
+
+            for file_path, content in all_code_content.items():
+                # Truncate very long files to avoid token limits
+                truncated_content = (
+                    content[:2000] + "..." if len(content) > 2000 else content
+                )
+                combined_content += f"""
+## {file_path}
+
+```{self._detect_language(Path(file_path).suffix)}
+{truncated_content}
+```
+
+"""
+
+            # Execute chain for summary generation
+            logger.info(
+                f"🔗 Generating architectural summary using {strategy} strategy"
+            )
+            summary_documentation = self.execute_chain(
+                chain, combined_content, str(dir_path)
+            )
+
+            if not summary_documentation:
+                logger.error("❌ Failed to generate summary using prompt chaining")
+                return None
+
+            # Apply post-processing to clean up formatting
+            summary_documentation = clean_documentation_output(summary_documentation)
 
             # Save summary
             with open(summary_path, "w", encoding="utf-8") as f:
-                f.write(summary_content)
+                f.write(summary_documentation)
 
-            logger.info(f"📋 Directory summary saved: {summary_path}")
+            logger.info(f"📋 Architectural summary saved: {summary_path}")
             return str(summary_path)
 
         except Exception as e:
-            logger.error(f"❌ Failed to generate directory summary: {str(e)}")
+            logger.error(f"❌ Failed to generate architectural summary: {str(e)}")
             return None
 
     def _detect_language(self, file_extension: str) -> str:

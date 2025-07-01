@@ -106,7 +106,96 @@ def _initialize_transformers_model(self):
 - Inference speed: 15-90 seconds per file
 - Optimal for: Server deployments and batch processing
 
-## 3. Development Workflow
+## 3. Prompt Chaining System
+
+DocGenAI includes a powerful prompt chaining system that enables multi-step AI generation workflows. This feature is **disabled by default** to maintain backward compatibility.
+
+### Overview
+
+Prompt chaining allows you to:
+
+- Break complex documentation tasks into multiple AI generation steps
+- Pass outputs from one step as inputs to subsequent steps
+- Create sophisticated workflows like analyze → generate → enhance
+- Build reusable chain configurations for common patterns
+
+### Key Components
+
+- **PromptStep**: Individual step in a chain with dependencies and transformation functions
+- **PromptChain**: Orchestrates multiple steps with dependency resolution and error handling
+- **ChainContext**: Manages state and results between steps
+- **ChainBuilder**: Provides pre-built chain configurations for common use cases
+
+### Available Chain Types
+
+1. **Simple**: Single-step generation (equivalent to current behavior)
+2. **Enhanced**: Multi-step analysis, generation, and enhancement
+3. **Architecture**: Architecture documentation with diagram specifications
+4. **Custom**: User-defined chain configurations
+
+### Configuration
+
+Enable chaining in `config.yaml`:
+
+```yaml
+chaining:
+  enabled: true                    # Enable prompt chaining
+  default_strategy: "enhanced"     # Default chain type
+  max_steps: 10                    # Maximum steps per chain
+  timeout_per_step: 300            # Timeout per step (seconds)
+  fail_fast: true                  # Stop on first failure
+  retry_failed_steps: false        # Retry failed steps
+  log_step_outputs: false          # Debug logging
+```
+
+### CLI Usage
+
+```bash
+# Enable chaining with default strategy
+docgenai generate src/ --chain
+
+# Use specific strategy
+docgenai generate src/ --chain --chain-strategy enhanced
+
+# Disable chaining (override config)
+docgenai generate src/ --no-chain
+```
+
+### Implementation Example
+
+```python
+from src.docgenai.chaining import ChainBuilder, PromptStep, PromptChain
+
+# Create a custom chain
+steps = [
+    PromptStep(
+        name="analyze",
+        prompt_template="Analyze this code: {code}",
+    ),
+    PromptStep(
+        name="document",
+        prompt_template="Based on analysis: {analyze}\n\nDocument: {code}",
+        depends_on=["analyze"]
+    )
+]
+
+chain = PromptChain(steps=steps, name="CustomChain")
+
+# Or use pre-built chains
+enhanced_chain = ChainBuilder.enhanced_documentation_chain()
+```
+
+### Future Enhancements
+
+The chaining system is designed to support future features like:
+
+- Architecture diagram generation
+- Multi-perspective documentation
+- Quality enhancement workflows
+- Parallel step execution
+- Custom transformation functions
+
+## 4. Development Workflow
 
 ### Local Development Setup
 

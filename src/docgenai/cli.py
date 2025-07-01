@@ -100,6 +100,16 @@ def cli(ctx, config, verbose):
     is_flag=True,
     help="Force offline mode (use only cached models)",
 )
+@click.option(
+    "--chain/--no-chain",
+    default=None,
+    help="Enable/disable prompt chaining (overrides config)",
+)
+@click.option(
+    "--chain-strategy",
+    type=click.Choice(["simple", "enhanced", "architecture"]),
+    help="Prompt chain strategy to use",
+)
 @click.pass_context
 def generate(
     ctx,
@@ -111,6 +121,8 @@ def generate(
     check_updates,
     force_download,
     offline,
+    chain,
+    chain_strategy,
 ):
     """
     Generate comprehensive documentation for code files or directories.
@@ -189,6 +201,26 @@ def generate(
         generator_config["output"]["dir"] = output_dir
         generator_config["output"]["include_architecture"] = architecture
         generator_config["templates"]["use_extended_footer"] = extended_footer
+
+        # Apply chaining configuration overrides
+        if chain is not None:
+            generator_config["chaining"]["enabled"] = chain
+            if chain:
+                click.echo("🔗 Prompt chaining enabled")
+            else:
+                click.echo("📝 Prompt chaining disabled")
+
+        if chain_strategy:
+            generator_config["chaining"]["default_strategy"] = chain_strategy
+            click.echo(f"🔗 Chain strategy: {chain_strategy}")
+
+        # Show chaining status
+        chaining_enabled = generator_config["chaining"]["enabled"]
+        if chaining_enabled:
+            strategy = generator_config["chaining"]["default_strategy"]
+            click.echo(f"🔗 Chaining: Enabled ({strategy} strategy)")
+        else:
+            click.echo("📝 Chaining: Disabled")
 
         generator = DocumentationGenerator(model, generator_config)
 
