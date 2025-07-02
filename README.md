@@ -40,11 +40,176 @@ poetry run docgenai generate myfile.py
 # Process entire directory
 poetry run docgenai generate src/ --output-dir docs
 
+# Multi-file analysis for better cross-file understanding
+poetry run docgenai generate src/ --multi-file --output-dir docs
+
 # Force fresh generation (bypass cache)
 poetry run docgenai generate src/models.py --no-output-cache
 
 # View system information
 poetry run docgenai info
+```
+
+## 🔗 Multi-File Analysis
+
+DocGenAI supports intelligent multi-file analysis that understands relationships between files and generates better documentation by analyzing related code together.
+
+### How Multi-File Analysis Works
+
+Instead of analyzing files in isolation, multi-file analysis:
+
+1. **Groups Related Files**: Automatically groups files by directory and relationships
+2. **Cross-File Understanding**: Analyzes how modules interact and depend on each other
+3. **Architectural Insights**: Identifies service boundaries, design patterns, and system architecture
+4. **Synthesis**: For large codebases, synthesizes insights across multiple file groups
+
+### Multi-File vs Single-File Comparison
+
+| Aspect | Single-File Analysis | Multi-File Analysis |
+|--------|---------------------|---------------------|
+| **Scope** | Individual file only | Related files together |
+| **Dependencies** | Limited to imports | Full dependency analysis |
+| **Architecture** | File-level patterns | System-level architecture |
+| **Context** | Isolated understanding | Cross-file relationships |
+| **Quality** | Good for individual files | Better for system understanding |
+| **Speed** | Faster per file | Slower but more comprehensive |
+
+### Multi-File Usage Examples
+
+#### Basic Multi-File Analysis
+
+```bash
+# Analyze a module directory with related files
+poetry run docgenai generate src/models/ --multi-file --output-dir docs/models
+
+# Analyze entire codebase with intelligent grouping
+poetry run docgenai generate src/ --multi-file --output-dir docs/codebase
+
+# Multi-file analysis with enhanced chaining for highest quality
+poetry run docgenai generate src/core/ --multi-file --chain --chain-strategy enhanced
+```
+
+#### Project Type Optimization
+
+```bash
+# Microservice-focused documentation
+poetry run docgenai generate src/ --multi-file --project-type microservice --output-dir docs/microservice
+
+# Library documentation with API focus
+poetry run docgenai generate src/ --multi-file --project-type library --output-dir docs/library
+
+# Application documentation with user focus
+poetry run docgenai generate src/ --multi-file --project-type application --output-dir docs/application
+
+# Framework documentation with extension points
+poetry run docgenai generate src/ --multi-file --project-type framework --output-dir docs/framework
+```
+
+#### Advanced Multi-File Options
+
+```bash
+# Control file grouping size
+poetry run docgenai generate src/ --multi-file --max-files-per-group 5 --output-dir docs
+
+# Multi-file with specific project type and chaining
+poetry run docgenai generate src/ --multi-file --project-type microservice --chain --chain-strategy enhanced
+
+# Large codebase analysis with synthesis
+poetry run docgenai generate large_project/ --multi-file --max-files-per-group 3 --output-dir docs/analysis
+```
+
+### Multi-File Output Structure
+
+Multi-file analysis generates organized documentation:
+
+```text
+docs/
+├── index.md                     # Navigation index (always generated)
+├── multi_file_documentation.md  # Single group analysis
+└── codebase_documentation.md    # Multi-group synthesis (large codebases)
+```
+
+For large codebases with multiple groups:
+
+```text
+docs/
+├── index.md                     # Navigation index
+├── codebase_documentation.md    # Comprehensive overview
+├── group_1_documentation.md     # Individual group docs
+├── group_2_documentation.md
+└── group_3_documentation.md
+```
+
+### Project Types
+
+DocGenAI supports different project types for tailored documentation:
+
+#### Microservice Projects
+
+- **Focus**: Service boundaries, API contracts, deployment considerations
+- **Sections**: Service Architecture, API Documentation, Deployment Guide
+- **Best for**: Individual services, API-focused modules
+
+```bash
+poetry run docgenai generate src/user-service/ --multi-file --project-type microservice
+```
+
+#### Library Projects
+
+- **Focus**: Public APIs, usage patterns, integration guides
+- **Sections**: API Reference, Usage Examples, Integration Guide
+- **Best for**: Reusable libraries, SDK modules
+
+```bash
+poetry run docgenai generate src/sdk/ --multi-file --project-type library
+```
+
+#### Application Projects
+
+- **Focus**: User workflows, configuration, operations
+- **Sections**: User Guide, Configuration, Operations Manual
+- **Best for**: End-user applications, CLI tools
+
+```bash
+poetry run docgenai generate src/ --multi-file --project-type application
+```
+
+#### Framework Projects
+
+- **Focus**: Extension points, patterns, architecture
+- **Sections**: Architecture Guide, Extension Guide, Best Practices
+- **Best for**: Frameworks, platforms, extensible systems
+
+```bash
+poetry run docgenai generate src/framework/ --multi-file --project-type framework
+```
+
+### Configuration-Based Multi-File
+
+Enable multi-file analysis by default in `config.yaml`:
+
+```yaml
+multi_file:
+  enabled: true
+  max_files_per_group: 6
+  project_type: "auto"  # or "microservice", "library", "application", "framework"
+
+chaining:
+  enabled: true
+  default_strategy: "enhanced"
+```
+
+Then use normally:
+
+```bash
+# Will use multi-file analysis from config
+poetry run docgenai generate src/
+
+# Override project type for this run
+poetry run docgenai generate src/ --project-type microservice
+
+# Disable multi-file for this run
+poetry run docgenai generate src/ --no-multi-file
 ```
 
 ## 🔗 Prompt Chaining Strategies
@@ -296,8 +461,17 @@ model:
 # Single file with default (simple) strategy
 poetry run docgenai generate src/models.py
 
+# Multi-file analysis for better cross-file understanding
+poetry run docgenai generate src/models/ --multi-file --output-dir docs/models
+
 # Enhanced documentation with multi-step chaining
 poetry run docgenai generate src/models.py --chain --chain-strategy enhanced
+
+# Multi-file analysis with enhanced chaining for highest quality
+poetry run docgenai generate src/core/ --multi-file --chain --chain-strategy enhanced
+
+# Project-type specific documentation
+poetry run docgenai generate src/ --multi-file --project-type microservice --output-dir docs/microservice
 
 # Architectural documentation with diagrams
 poetry run docgenai generate src/core.py --chain --chain-strategy architecture
@@ -305,14 +479,14 @@ poetry run docgenai generate src/core.py --chain --chain-strategy architecture
 # Directory processing with enhanced strategy
 poetry run docgenai generate src/ --output-dir documentation --chain --chain-strategy enhanced
 
-# Exclude architecture analysis for faster processing (legacy option)
-poetry run docgenai generate large_project/ --no-architecture
+# Large codebase multi-file analysis with synthesis
+poetry run docgenai generate large_project/ --multi-file --max-files-per-group 3 --output-dir docs
 
 # Force regeneration without cache
 poetry run docgenai generate src/core.py --no-output-cache
 
-# Combine chaining with cache bypass
-poetry run docgenai generate src/models.py --chain --chain-strategy enhanced --no-output-cache
+# Combine multi-file, chaining, and project type
+poetry run docgenai generate src/ --multi-file --chain --chain-strategy enhanced --project-type application
 ```
 
 ### Cache Management

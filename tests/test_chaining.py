@@ -7,7 +7,7 @@ from unittest.mock import MagicMock, Mock
 
 import pytest
 
-from src.docgenai.chaining import (
+from docgenai.chaining import (
     ChainBuilder,
     ChainContext,
     PromptChain,
@@ -461,7 +461,8 @@ class TestChainBuilder:
         assert "simple" in available
         assert "enhanced" in available
         assert "architecture" in available
-        assert "custom" in available
+        assert "multi_file" in available
+        assert "codebase" in available
 
     def test_create_chain_by_type(self):
         """Test creating chains by type name."""

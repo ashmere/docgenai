@@ -1,1 +1,8 @@
 pull_request_template.md
+# AI-generated documentation may have these issues that are acceptable
+# MD040: Fenced code blocks should have a language specified
+# MD032: Lists should be surrounded by blank lines
+# MD024: Multiple headings with the same content (common in AI-generated docs)
+# MD025: Multiple top-level headings (common in AI-generated docs)
+sample_output/**/*.md MD040 MD032 MD024 MD025
+test_output/**/*.md MD040 MD032 MD024 MD025

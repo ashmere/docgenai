@@ -64,10 +64,12 @@ def generate_multi_file_docs():
         chain_context = ChainContext()
 
         # Add all the multi-file context data
-        chain_context.set_variable("files_content", context["files_content"])
-        chain_context.set_variable("files_summary", context["files_summary"])
-        chain_context.set_variable("file_count", context["file_count"])
-        chain_context.set_variable("file_names", context["file_names"])
+        chain_context.set_input("files_content", context["files_content"])
+        chain_context.set_input("files_summary", context["files_summary"])
+        chain_context.set_input("file_count", context["file_count"])
+        chain_context.set_input("file_names", context["file_names"])
+        chain_context.set_input("project_type", context["project_type"])
+        chain_context.set_input("detail_level", "module_plus_strategic_class")
 
         print("📝 Executing chain steps...")
 
@@ -76,17 +78,17 @@ def generate_multi_file_docs():
             print(f"  Step {i+1}: {step.name}")
 
             # Prepare prompt with current context
-            prompt = step.format_prompt(chain_context.get_all_variables())
+            prompt = step.build_prompt(chain_context)
 
             # Show prompt preview (first 200 chars)
             prompt_preview = prompt[:200].replace("\n", " ")
             print(f"    Prompt: {prompt_preview}...")
 
             # Generate response
-            response = model.generate(prompt)
+            response = model.generate_raw_response(prompt)
 
             # Store result in context
-            chain_context.set_variable(step.name, response)
+            chain_context.set_input(step.name, response)
 
             # Show response preview
             response_preview = response[:150].replace("\n", " ")
@@ -94,7 +96,7 @@ def generate_multi_file_docs():
             print()
 
         # Get final documentation
-        final_docs = chain_context.get_variable("comprehensive_documentation")
+        final_docs = chain_context.get_input("multi_file_documentation")
 
         # Save to file
         output_file = Path("test_output/multi_file_chaining_docs.md")
@@ -111,8 +113,8 @@ def generate_multi_file_docs():
         print(f"📄 Document length: {len(final_docs)} characters")
 
         # Show some statistics
-        overview = chain_context.get_variable("file_group_overview")
-        cross_analysis = chain_context.get_variable("cross_file_analysis")
+        overview = chain_context.get_input("file_group_overview")
+        cross_analysis = chain_context.get_input("cross_file_analysis")
 
         print(f"\n📊 Analysis Results:")
         print(f"  - Overview length: {len(overview)} chars")

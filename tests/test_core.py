@@ -171,17 +171,15 @@ class TestDocumentationGenerator(unittest.TestCase):
                 mock_find.return_value = [Path("file1.py"), Path("file2.py")]
                 with patch.object(generator, "process_file") as mock_process:
                     mock_process.side_effect = ["output1.md", "output2.md"]
-                    with patch.object(
-                        generator, "_generate_directory_summary"
-                    ) as mock_summary:
-                        mock_summary.return_value = "summary.md"
+                    with patch.object(generator, "_generate_index") as mock_index:
+                        mock_index.return_value = "index.md"
 
                         results = generator.process_directory(test_dir)
 
-        self.assertEqual(len(results), 3)  # 2 files + 1 summary
+        self.assertEqual(len(results), 3)  # 2 files + 1 index
         self.assertIn("output1.md", results)
         self.assertIn("output2.md", results)
-        self.assertIn("summary.md", results)
+        self.assertIn("index.md", results)
 
     @patch("docgenai.core.CacheManager")
     @patch("docgenai.core.TemplateManager")

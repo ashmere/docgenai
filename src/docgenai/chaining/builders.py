@@ -16,6 +16,23 @@ class ChainBuilder:
     and utilities for creating custom chains.
     """
 
+    # Shared formatting rules (same as BasePromptBuilder)
+    MARKDOWN_FORMATTING_RULES = """
+Please write the documentation in clear, professional Markdown format
+following these rules:
+- Use ## headers (not # headers) for main sections
+- Surround all lists with blank lines before and after
+- Use only single blank lines between sections
+- Specify language for all code blocks (```python, ```bash, etc.)
+- Do NOT wrap your entire response in a code block
+- Do NOT use duplicate section headings
+- Ensure that code examples are formatted correctly with proper markers
+- Do not use ```text markers anywhere in the output
+- Close all code blocks properly with ```
+- Keep code examples complete and well-formatted
+- Avoid adding text immediately after closing code blocks
+"""
+
     @staticmethod
     def simple_documentation_chain() -> PromptChain:
         """
@@ -309,7 +326,7 @@ Create final architecture documentation:""",
         """
         # Use new enhanced prompts based on documentation type
         if doc_type == "developer":
-            analysis_prompt = """
+            analysis_prompt = f"""
 You are an expert software architect analyzing multiple related files.
 Generate comprehensive developer documentation with systems architecture focus.
 
@@ -318,18 +335,23 @@ Generate comprehensive developer documentation with systems architecture focus.
 - Include only strategic/architectural classes, not implementation details
 - Emphasize microservices patterns and deployment considerations
 
-**Project Type**: {project_type}
+**Project Type**: {{project_type}}
 
 **Files to Analyze**:
-{files_content}
+{{files_content}}
 
 The documentation should include:
 
-1. **System Purpose & Architecture**: What problem does this solve? Key architectural decisions and overall system design
-2. **Module Interaction Analysis**: How do these modules/files interact and depend on each other? Service boundaries and data flow
-3. **Key Class Relationships**: Core abstractions, design patterns, and critical dependency relationships
-4. **Microservices Architecture Insights**: Service boundary identification, communication patterns, team ownership
-5. **Development Guide**: Extension points, key patterns to follow, architecture constraints
+1. **System Purpose & Architecture**: What problem does this solve? Key \
+architectural decisions and overall system design
+2. **Module Interaction Analysis**: How do these modules/files interact and \
+depend on each other? Service boundaries and data flow
+3. **Key Class Relationships**: Core abstractions, design patterns, and \
+critical dependency relationships
+4. **Microservices Architecture Insights**: Service boundary identification, \
+communication patterns, team ownership
+5. **Development Guide**: Extension points, key patterns to follow, \
+architecture constraints
 
 **Guidelines**:
 - Focus on cross-file relationships and dependencies
@@ -338,12 +360,16 @@ The documentation should include:
 - Include specific examples of file interactions
 - Consider microservices architecture and deployment patterns
 
-Write comprehensive documentation analyzing these files together:"""
+{ChainBuilder.MARKDOWN_FORMATTING_RULES}
+
+Write the documentation directly without any markdown code block wrappers.
+Start immediately with the first section:"""
 
         elif doc_type == "user":
-            analysis_prompt = """
+            analysis_prompt = f"""
 You are an expert technical writer analyzing multiple application files.
-Generate practical user documentation focusing on how to use this application.
+Generate practical user documentation focusing on how to use this \
+application.
 
 **Analysis Instructions**:
 - Focus on user-facing functionality across these files
@@ -352,14 +378,18 @@ Generate practical user documentation focusing on how to use this application.
 - Include troubleshooting and operational guidance
 
 **Files to Analyze**:
-{files_content}
+{{files_content}}
 
 The documentation should include:
 
-1. **Quick Start**: Primary use cases, installation steps, first successful run example
-2. **Command Line Interface**: Available commands with examples, common usage patterns, configuration options
-3. **Configuration Guide**: Environment variables, configuration file structure, common scenarios
-4. **Operational Guide**: Monitoring, troubleshooting, performance considerations
+1. **Quick Start**: Primary use cases, installation steps, first successful \
+run example
+2. **Command Line Interface**: Available commands with examples, common usage \
+patterns, configuration options
+3. **Configuration Guide**: Environment variables, configuration file \
+structure, common scenarios
+4. **Operational Guide**: Monitoring, troubleshooting, performance \
+considerations
 
 **Guidelines**:
 - Use command-line examples, not code examples
@@ -367,24 +397,29 @@ The documentation should include:
 - Show how to install, configure, and operate the application
 - Include troubleshooting for common issues
 
-Write practical user documentation for this application:"""
+{ChainBuilder.MARKDOWN_FORMATTING_RULES}
+
+Write the documentation directly without any markdown code block wrappers.
+Start immediately with the first section:"""
 
         else:  # both
-            analysis_prompt = """
+            analysis_prompt = f"""
 You are an expert software architect and technical writer.
 Generate comprehensive documentation for both developers and users.
 
 **Analysis Level**: Module-level + Strategic Class-level for developers
-**Project Type**: {project_type}
+**Project Type**: {{project_type}}
 
 **Files to Analyze**:
-{files_content}
+{{files_content}}
 
 Generate TWO sections:
 
 ## Developer Documentation
-1. **System Purpose & Architecture**: Key architectural decisions and system design
-2. **Module Interaction Analysis**: File interactions, service boundaries, data flow
+1. **System Purpose & Architecture**: Key architectural decisions and \
+system design
+2. **Module Interaction Analysis**: File interactions, service boundaries, \
+data flow
 3. **Key Class Relationships**: Core abstractions and design patterns
 4. **Development Guide**: Extension points and architecture constraints
 
@@ -394,7 +429,10 @@ Generate TWO sections:
 3. **Configuration Guide**: Settings and configuration options
 4. **Operational Guide**: Troubleshooting and operations
 
-Write comprehensive documentation for both audiences:"""
+{ChainBuilder.MARKDOWN_FORMATTING_RULES}
+
+Write the documentation directly without any markdown code block wrappers.
+Start immediately with the first section:"""
 
         steps = [
             PromptStep(
@@ -435,19 +473,19 @@ Write comprehensive documentation for both audiences:"""
         steps = [
             PromptStep(
                 name="codebase_overview",
-                prompt_template="""
+                prompt_template=f"""
 Analyze this codebase structure and provide a high-level overview:
 
 **Codebase Structure:**
-- Total files: {total_files}
-- Analysis groups: {groups}
-- Primary directories: {primary_directories}
+- Total files: {{total_files}}
+- Analysis groups: {{groups}}
+- Primary directories: {{primary_directories}}
 
 **Group Details:**
-{group_summaries}
+{{group_summaries}}
 
 **Large Files (analyzed separately):**
-{large_files}
+{{large_files}}
 
 Provide:
 1. Overall purpose and architecture of this codebase
@@ -455,21 +493,24 @@ Provide:
 3. Key design patterns and architectural decisions
 4. Technology stack and dependencies
 
-Codebase Overview:""",
+{ChainBuilder.MARKDOWN_FORMATTING_RULES}
+
+Write the overview directly without any markdown code block wrappers.
+Start immediately with the first section:""",
                 config=StepConfig(timeout=300.0),
                 metadata={"type": "codebase_overview", "version": "1.0"},
             ),
             PromptStep(
                 name="cross_group_analysis",
-                prompt_template="""
+                prompt_template=f"""
 Based on the codebase overview:
 
-{codebase_overview}
+{{codebase_overview}}
 
 Analyze the relationships between different modules/groups:
 
 **Group Details:**
-{group_summaries}
+{{group_summaries}}
 
 Focus on:
 1. How different modules interact with each other
@@ -478,22 +519,25 @@ Focus on:
 4. Dependencies and coupling patterns
 5. Integration points and APIs
 
-Cross-Group Analysis:""",
+{ChainBuilder.MARKDOWN_FORMATTING_RULES}
+
+Write the analysis directly without any markdown code block wrappers.
+Start immediately with the first section:""",
                 depends_on=["codebase_overview"],
                 config=StepConfig(timeout=360.0),
                 metadata={"type": "cross_group_analysis", "version": "1.0"},
             ),
             PromptStep(
                 name="architecture_synthesis",
-                prompt_template="""
+                prompt_template=f"""
 Create a comprehensive architectural analysis:
 
-**Codebase Overview:** {codebase_overview}
+**Codebase Overview:** {{codebase_overview}}
 
-**Cross-Group Analysis:** {cross_group_analysis}
+**Cross-Group Analysis:** {{cross_group_analysis}}
 
 **Detailed Group Information:**
-{group_summaries}
+{{group_summaries}}
 
 Synthesize into:
 1. **System Architecture**: High-level design and component relationships
@@ -503,21 +547,24 @@ Synthesize into:
 5. **Extensibility**: How the system can be extended
 6. **Best Practices**: Coding patterns and conventions used
 
-Architecture Synthesis:""",
+{ChainBuilder.MARKDOWN_FORMATTING_RULES}
+
+Write the synthesis directly without any markdown code block wrappers.
+Start immediately with the first section:""",
                 depends_on=["codebase_overview", "cross_group_analysis"],
                 config=StepConfig(timeout=420.0),
                 metadata={"type": "architecture_synthesis", "version": "1.0"},
             ),
             PromptStep(
                 name="comprehensive_documentation",
-                prompt_template="""
+                prompt_template=f"""
 Create comprehensive documentation for this codebase:
 
-**Overview:** {codebase_overview}
+**Overview:** {{codebase_overview}}
 
-**Architecture:** {architecture_synthesis}
+**Architecture:** {{architecture_synthesis}}
 
-**Cross-Group Analysis:** {cross_group_analysis}
+**Cross-Group Analysis:** {{cross_group_analysis}}
 
 Generate structured documentation including:
 
@@ -544,7 +591,10 @@ Generate structured documentation including:
 ## 7. Extension Points
 [How to extend the system]
 
-Comprehensive Documentation:""",
+{ChainBuilder.MARKDOWN_FORMATTING_RULES}
+
+Write the documentation directly without any markdown code block wrappers.
+Start immediately with the first section:""",
                 depends_on=[
                     "codebase_overview",
                     "cross_group_analysis",

@@ -23,6 +23,7 @@ typeguard = "^4.4.4"
 diffusers = "0.34.0"
 mlx-lm = {version = "^0.20.0", markers = "sys_platform == 'darwin'"}
 openai = "^1.58.1"
+toml = "^0.10.2"
 
 [tool.poetry.group.dev.dependencies]
 pre-commit = "^4.2.0"

@@ -141,7 +141,7 @@ templates:
   author: ""                               # Default author name
   organization: ""                         # Default organization
   project_name: ""                        # Default project name
-  version: "1.0.0"                        # Default version
+  project_version: ""                     # Your project version (optional)
 
 # Generation Configuration
 generation:

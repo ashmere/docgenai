@@ -14,8 +14,9 @@ import time
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+from . import __version__
 from .cache import CacheManager
-from .chaining import ChainBuilder, PromptChain
+from .chaining import PromptChain
 from .config import (
     get_cache_config,
     get_generation_config,
@@ -23,7 +24,7 @@ from .config import (
     get_output_config,
     load_config,
 )
-from .models import AIModel, create_model
+from .models import AIModel
 from .templates import TemplateManager
 
 logger = logging.getLogger(__name__)
@@ -112,9 +113,24 @@ class DocumentationGenerator:
                 cached_doc = cached_result.get("documentation", "")
                 cached_arch = cached_result.get("architecture_description", "")
 
+                # Create analysis info for single file
+                analysis_info = {
+                    "multi_file": False,
+                    "project_type": "auto",
+                    "doc_type": "both",
+                    "file_count": 1,
+                    "groups": 1,
+                    "synthesis_used": False,
+                    "chaining_enabled": False,
+                    "chain_strategy": "single_file",
+                    "chain_steps": 1,
+                    "chain_description": "Single file documentation",
+                    "post_processing": True,
+                }
+
                 # Create context for current output directory
                 context = self._create_template_context(
-                    file_path, "", cached_doc, cached_arch
+                    file_path, "", cached_doc, cached_arch, analysis_info
                 )
 
                 # Render template
@@ -162,9 +178,28 @@ class DocumentationGenerator:
                     f"{arch_elapsed:.2f} seconds"
                 )
 
+            # Create analysis info for single file
+            analysis_info = {
+                "multi_file": False,
+                "project_type": "auto",
+                "doc_type": "both",
+                "file_count": 1,
+                "groups": 1,
+                "synthesis_used": False,
+                "chaining_enabled": False,
+                "chain_strategy": "single_file",
+                "chain_steps": 1,
+                "chain_description": "Single file documentation",
+                "post_processing": True,
+            }
+
             # Prepare template context
             context = self._create_template_context(
-                file_path, code_content, documentation, architecture_description
+                file_path,
+                code_content,
+                documentation,
+                architecture_description,
+                analysis_info,
             )
 
             # Render template
@@ -472,9 +507,10 @@ class DocumentationGenerator:
         code_content: str,
         documentation: str,
         architecture_description: str,
+        analysis_info: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         """Create template context for rendering."""
-        return {
+        context = {
             "file_path": str(file_path),
             "file_name": file_path.name,
             "language": self._detect_language(file_path.suffix),
@@ -504,9 +540,18 @@ class DocumentationGenerator:
                 "project_name": self.config.get("templates", {}).get(
                     "project_name", ""
                 ),
-                "version": self.config.get("templates", {}).get("version", "1.0.0"),
+                "docgenai_version": __version__,
+                "project_version": self.config.get("templates", {}).get(
+                    "project_version", ""
+                ),
             },
         }
+
+        # Add analysis_info if provided
+        if analysis_info:
+            context["analysis_info"] = analysis_info
+
+        return context
 
     def _save_documentation(self, input_file: Path, content: str) -> str:
         """Save generated documentation to file."""
@@ -862,6 +907,7 @@ def _generate_multi_file_documentation(
 
     # Get chain strategy
     chain_strategy = config.get("chain_strategy", "multi_file")
+    logger.info(f"🔗 Using chain strategy: {chain_strategy}")
 
     # Handle different strategies
     if codebase_structure["groups"] == 0:
@@ -869,15 +915,15 @@ def _generate_multi_file_documentation(
         return {"output_files": [], "success": False, "error": "No suitable files"}
 
     elif codebase_structure["groups"] == 1:
-        # Single group - use multi-file analysis
+        # Single group - use specified strategy
         return _analyze_single_group(
-            analyzer, model, config, output_dir, codebase_structure
+            analyzer, model, config, output_dir, codebase_structure, chain_strategy
         )
 
     else:
         # Multiple groups - use codebase analysis with synthesis
         return _analyze_multiple_groups(
-            analyzer, model, config, output_dir, codebase_structure
+            analyzer, model, config, output_dir, codebase_structure, chain_strategy
         )
 
 
@@ -887,6 +933,7 @@ def _analyze_single_group(
     config: Dict[str, Any],
     output_dir: str,
     codebase_structure: Dict[str, Any],
+    chain_strategy: str,
 ) -> Dict[str, Any]:
     """Analyze a single group of files."""
     from .chaining.context import ChainContext
@@ -910,9 +957,18 @@ def _analyze_single_group(
     doc_type = doc_config.get("doc_type", "developer")
     project_type = context.get("project_type", "auto")
 
-    # Create chain with documentation parameters
-    chain = ChainBuilder.multi_file_analysis_chain(
-        doc_type=doc_type, project_type=project_type
+    # Create chain with specified strategy (only multi_file and codebase work with multi-file analysis)
+    from .chaining.builders import ChainBuilder
+
+    multi_file_compatible_strategies = ["multi_file", "codebase"]
+    if chain_strategy not in multi_file_compatible_strategies:
+        logger.warning(
+            f"⚠️  Strategy '{chain_strategy}' not compatible with multi-file analysis, using 'multi_file'"
+        )
+        chain_strategy = "multi_file"
+
+    chain = ChainBuilder.create_chain(
+        chain_strategy, doc_type=doc_type, project_type=project_type
     )
 
     # Execute chain
@@ -953,7 +1009,75 @@ def _analyze_single_group(
             "error": "Documentation generation failed",
         }
 
-    # Save output
+    # Create analysis_info for template context
+    analysis_info = {
+        "multi_file": True,
+        "project_type": project_type,
+        "doc_type": doc_type,
+        "file_count": len(file_group),
+        "groups": 1,
+        "synthesis_used": False,
+        "chaining_enabled": True,
+        "chain_strategy": chain_strategy,
+        "chain_steps": len(chain.steps),
+        "chain_description": f"Multi-file analysis for {project_type} project",
+        "post_processing": True,
+    }
+
+    # Create template manager and render with footer
+    template_manager = TemplateManager(config.get("templates", {}))
+
+    # Create template context for the first file (representative)
+    first_file_path = Path(file_group[0])
+    template_context = {
+        "file_path": str(first_file_path.parent),
+        "file_name": "Multi-file Analysis",
+        "language": "Multiple",
+        "documentation": final_docs,
+        "architecture_description": "",
+        "include_architecture": False,
+        "include_code_stats": True,
+        "include_dependencies": True,
+        "include_examples": True,
+        "generation_time": time.strftime("%Y-%m-%d %H:%M:%S"),
+        "model_info": model.get_model_info(),
+        "code_stats": {
+            "lines": sum(
+                len(open(f, "r", encoding="utf-8", errors="ignore").read().splitlines())
+                for f in file_group
+            ),
+            "characters": sum(
+                len(open(f, "r", encoding="utf-8", errors="ignore").read())
+                for f in file_group
+            ),
+            "size_kb": round(
+                sum(
+                    len(
+                        open(f, "r", encoding="utf-8", errors="ignore")
+                        .read()
+                        .encode("utf-8")
+                    )
+                    for f in file_group
+                )
+                / 1024,
+                2,
+            ),
+        },
+        "analysis_info": analysis_info,
+        "config": {
+            "detail_level": config.get("generation", {}).get("detail_level", "medium"),
+            "author": config.get("templates", {}).get("author", ""),
+            "organization": config.get("templates", {}).get("organization", ""),
+            "project_name": config.get("templates", {}).get("project_name", ""),
+            "docgenai_version": __version__,
+            "project_version": config.get("templates", {}).get("project_version", ""),
+        },
+    }
+
+    # Render footer
+    footer_content = template_manager.render_footer(template_context)
+
+    # Save output with template footer
     output_path = Path(output_dir) / "multi_file_documentation.md"
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -962,11 +1086,22 @@ def _analyze_single_group(
         f.write(f"**Files analyzed:** {', '.join(context['file_names'])}\n\n")
         f.write("---\n\n")
         f.write(clean_documentation_output(final_docs))
+        f.write("\n\n")
+        f.write(footer_content)
 
     logger.info(f"✅ Multi-file documentation saved: {output_path}")
 
+    # Generate index.md for the output directory
+    output_files = [str(output_path)]
+    try:
+        index_path = _generate_index_standalone(output_dir)
+        if index_path:
+            output_files.append(index_path)
+    except Exception as e:
+        logger.warning(f"⚠️  Failed to generate index: {e}")
+
     return {
-        "output_files": [str(output_path)],
+        "output_files": output_files,
         "success": True,
         "multi_file_stats": {
             "groups": 1,
@@ -982,6 +1117,7 @@ def _analyze_multiple_groups(
     config: Dict[str, Any],
     output_dir: str,
     codebase_structure: Dict[str, Any],
+    chain_strategy: str,
 ) -> Dict[str, Any]:
     """Analyze multiple groups with synthesis."""
     from .chaining.context import ChainContext
@@ -1025,9 +1161,13 @@ def _analyze_multiple_groups(
     doc_type = doc_config.get("doc_type", "developer")
     project_type = doc_config.get("project_type", "auto")
 
-    # Create codebase analysis chain
-    chain = ChainBuilder.codebase_analysis_chain(
-        doc_type=doc_type, project_type=project_type
+    # Create chain with specified strategy (fallback to codebase for multi-group)
+    from .chaining.builders import ChainBuilder
+
+    # Use the specified chain strategy, fallback to codebase for complex multi-group analysis
+    effective_strategy = chain_strategy
+    chain = ChainBuilder.create_chain(
+        effective_strategy, doc_type=doc_type, project_type=project_type
     )
 
     # Execute chain
@@ -1068,6 +1208,57 @@ def _analyze_multiple_groups(
     output_path = Path(output_dir)
     output_path.mkdir(parents=True, exist_ok=True)
 
+    # Create analysis_info for template context
+    analysis_info = {
+        "multi_file": True,
+        "project_type": project_type,
+        "doc_type": doc_type,
+        "file_count": codebase_structure["total_files"],
+        "groups": codebase_structure["groups"],
+        "synthesis_used": True,
+        "chaining_enabled": True,
+        "chain_strategy": effective_strategy,
+        "chain_steps": len(chain.steps),
+        "chain_description": f"Multi-group synthesis for {project_type} project",
+        "post_processing": True,
+        "total_tokens": sum(s["estimated_tokens"] for s in group_summaries),
+    }
+
+    # Create template manager and render with footer
+    template_manager = TemplateManager(config.get("templates", {}))
+
+    # Create template context
+    template_context = {
+        "file_path": codebase_structure["root_path"],
+        "file_name": "Codebase Analysis",
+        "language": "Multiple",
+        "documentation": final_docs,
+        "architecture_description": "",
+        "include_architecture": False,
+        "include_code_stats": True,
+        "include_dependencies": True,
+        "include_examples": True,
+        "generation_time": time.strftime("%Y-%m-%d %H:%M:%S"),
+        "model_info": model.get_model_info(),
+        "code_stats": {
+            "lines": 0,  # Will be calculated from group summaries
+            "characters": 0,  # Will be calculated from group summaries
+            "size_kb": 0,  # Will be calculated from group summaries
+        },
+        "analysis_info": analysis_info,
+        "config": {
+            "detail_level": config.get("generation", {}).get("detail_level", "medium"),
+            "author": config.get("templates", {}).get("author", ""),
+            "organization": config.get("templates", {}).get("organization", ""),
+            "project_name": config.get("templates", {}).get("project_name", ""),
+            "docgenai_version": __version__,
+            "project_version": config.get("templates", {}).get("project_version", ""),
+        },
+    }
+
+    # Render footer
+    footer_content = template_manager.render_footer(template_context)
+
     # Save comprehensive documentation
     main_doc_path = output_path / "codebase_documentation.md"
     with open(main_doc_path, "w", encoding="utf-8") as f:
@@ -1077,6 +1268,8 @@ def _analyze_multiple_groups(
         f.write(f"**Analysis Groups:** {codebase_structure['groups']}\n\n")
         f.write("---\n\n")
         f.write(clean_documentation_output(final_docs))
+        f.write("\n\n")
+        f.write(footer_content)
 
     # Save individual group documentation
     output_files = [str(main_doc_path)]
@@ -1134,6 +1327,14 @@ def _analyze_multiple_groups(
                 logger.warning(f"⚠️  Failed to generate group {i+1} documentation: {e}")
 
     logger.info(f"✅ Codebase analysis complete: {len(output_files)} files generated")
+
+    # Generate index.md for the output directory
+    try:
+        index_path = _generate_index_standalone(output_dir)
+        if index_path:
+            output_files.append(index_path)
+    except Exception as e:
+        logger.warning(f"⚠️  Failed to generate index: {e}")
 
     return {
         "output_files": output_files,
@@ -1239,6 +1440,75 @@ def generate_directory_documentation(
     }
 
 
+def _generate_index_standalone(output_dir: str) -> Optional[str]:
+    """Generate an index document for all documentation in the output directory."""
+    try:
+        import time
+
+        output_path = Path(output_dir)
+        index_path = output_path / "index.md"
+
+        # Ensure output directory exists
+        output_path.mkdir(parents=True, exist_ok=True)
+
+        # Find all markdown files in the output directory
+        all_docs = []
+        if output_path.exists():
+            for md_file in output_path.glob("*.md"):
+                if md_file.name != "index.md":  # Don't include the index itself
+                    all_docs.append(md_file)
+
+        # Sort by name for consistent ordering
+        all_docs.sort(key=lambda x: x.name)
+
+        # Create index content
+        index_content = f"""# Documentation Index
+
+Generated on: {time.strftime("%Y-%m-%d %H:%M:%S")}
+
+## Available Documentation
+
+"""
+
+        if all_docs:
+            for doc_file in all_docs:
+                # Create a readable name from filename
+                display_name = doc_file.stem.replace("_", " ").title()
+                if display_name.endswith(" Documentation"):
+                    # Remove " Documentation" suffix
+                    display_name = display_name[:-14]
+
+                index_content += f"- [{display_name}](./{doc_file.name})\n"
+        else:
+            index_content += "*No documentation files found.*\n"
+
+        index_content += f"""
+
+## Statistics
+
+- Total documentation files: {len(all_docs)}
+- Last updated: {time.strftime("%Y-%m-%d %H:%M:%S")}
+
+---
+
+*Generated by DocGenAI*
+"""
+
+        # Apply post-processing to clean up formatting
+        index_content = clean_documentation_output(index_content)
+
+        # Save index
+        with open(index_path, "w", encoding="utf-8") as f:
+            f.write(index_content)
+
+        logger.info(f"📋 Documentation index saved: {index_path}")
+        return str(index_path)
+
+    except Exception as e:
+        logger.error(f"❌ Failed to generate documentation index: {str(e)}")
+        return None
+
+
 def clean_documentation_output(content: str) -> str:
     """
     Clean up common formatting issues in generated documentation.
@@ -1250,55 +1520,9 @@ def clean_documentation_output(content: str) -> str:
     Returns:
         Cleaned documentation content
     """
-    # Remove spurious ```text markers
-    content = re.sub(r"```text\s*\n", "\n", content)
-    content = re.sub(r"```text\s*$", "", content, flags=re.MULTILINE)
+    from .post_processing import process_generated_markdown
 
-    # Fix malformed patterns like **Documentation**: followed by ```
-    content = re.sub(r"\*\*Documentation\*\*:\s*\n```\s*\n", "", content)
-
-    # Fix unclosed code blocks (all types: python, bash, etc.)
-    lines = content.split("\n")
-    fixed_lines = []
-    in_code_block = False
-    code_block_type = None
-
-    for i, line in enumerate(lines):
-        # Check if starting a code block
-        if line.strip().startswith("```") and not in_code_block:
-            in_code_block = True
-            code_block_type = line.strip()[3:].strip()  # Get the language after ```
-            fixed_lines.append(line)
-        # Check if ending a code block
-        elif line.strip() == "```" and in_code_block:
-            in_code_block = False
-            code_block_type = None
-            fixed_lines.append(line)
-        # Check if we hit a new section while in a code block
-        elif in_code_block and (
-            line.startswith("##")
-            or line.startswith("**")
-            or line.startswith("---")
-            or (i == len(lines) - 1)
-        ):
-            # Close the code block before the new section
-            fixed_lines.append("```")
-            in_code_block = False
-            code_block_type = None
-            fixed_lines.append(line)
-        else:
-            fixed_lines.append(line)
-
-    # If we're still in a code block at the end, close it
-    if in_code_block:
-        fixed_lines.append("```")
-
-    content = "\n".join(fixed_lines)
-
-    # Now apply markdown linting fixes
-    content = _fix_markdown_linting_issues(content)
-
-    return content
+    return process_generated_markdown(content)
 
 
 def _fix_markdown_linting_issues(content: str) -> str:
@@ -1388,6 +1612,7 @@ def _fix_markdown_linting_issues(content: str) -> str:
     content = re.sub(r"__([^_]+)__", r"**\1**", content)
 
     # MD012: Multiple consecutive blank lines - replace with single blank line
+    # This handles the specific issue seen in test_output/multi_file_demo.md
     content = re.sub(r"\n\n\n+", "\n\n", content)
 
     # Remove trailing whitespace from all lines

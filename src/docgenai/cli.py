@@ -12,6 +12,7 @@ from pathlib import Path
 
 import click
 
+from . import __version__
 from .config import create_default_config_file, load_config
 from .core import DocumentationGenerator, generate_documentation
 from .models import create_model
@@ -107,13 +108,8 @@ def cli(ctx, config, verbose):
 )
 @click.option(
     "--chain-strategy",
-    type=click.Choice(["simple", "enhanced", "architecture", "multi_file"]),
+    type=click.Choice(["simple", "enhanced", "architecture", "multi_file", "codebase"]),
     help="Prompt chain strategy to use",
-)
-@click.option(
-    "--multi-file/--single-file",
-    default=False,
-    help="Enable multi-file analysis for better cross-file understanding",
 )
 @click.option(
     "--max-files-per-group",
@@ -139,11 +135,6 @@ def cli(ctx, config, verbose):
     default="module_plus_strategic_class",
     help="Level of detail for file interaction analysis",
 )
-@click.option(
-    "--single-doc",
-    is_flag=True,
-    help="Combine both document types in one file instead of separate files",
-)
 @click.pass_context
 def generate(
     ctx,
@@ -157,18 +148,17 @@ def generate(
     cache_clear,
     chain,
     chain_strategy,
-    multi_file,
     max_files_per_group,
     doc_type,
     project_type,
     detail_level,
-    single_doc,
 ):
     """
     Generate documentation for source code files.
 
-    TARGET can be a single file or directory. For directories,
-    use --multi-file to enable multi-file analysis.
+    TARGET can be a single file or directory. Multi-file analysis
+    is automatically enabled for directories and can be forced for
+    single files with --multi-file.
     """
     import logging
     import time
@@ -201,54 +191,65 @@ def generate(
 
         clear_cache()
 
+    # Convert target to Path for analysis
+    target_path = Path(target)
+
+    # Auto-detect multi-file mode based on target type
+    is_directory = target_path.is_dir()
+    use_multi_file = is_directory
+
     # Handle multi-file settings
-    if multi_file:
-        config["multi_file"] = {
-            "enabled": True,
-            "max_files_per_group": max_files_per_group,
-        }
-    else:
-        config["multi_file"] = {"enabled": False}
+    config["multi_file"] = {
+        "enabled": use_multi_file,
+        "max_files_per_group": max_files_per_group,
+    }
 
     # Handle documentation configuration
     config["documentation"]["doc_type"] = doc_type
     config["documentation"]["project_type"] = project_type
     config["documentation"]["detail_level"] = detail_level
-    config["output"]["separate_files"] = not single_doc
+
+    # Handle chaining configuration
+    if chain is not None:
+        # Explicit --chain or --no-chain flag
+        config["chaining"] = {"enabled": chain}
+    elif chain_strategy:
+        # Chain strategy specified, enable chaining
+        config["chaining"] = {"enabled": True}
+    elif use_multi_file:
+        # Multi-file mode always uses chaining
+        config["chaining"] = {"enabled": True}
+    else:
+        # Default: no chaining for single files
+        config["chaining"] = {"enabled": False}
 
     # Determine chain strategy
     if chain_strategy:
         config["chain_strategy"] = chain_strategy
-    elif multi_file:
-        # Auto-select strategy based on input
-        target_path = Path(target)
-        if target_path.is_dir():
-            # For directories, use codebase analysis if multi-file enabled
+    elif use_multi_file:
+        # Auto-select strategy based on input type
+        if is_directory:
+            # For directories, use codebase analysis
             config["chain_strategy"] = "codebase"
         else:
             config["chain_strategy"] = "multi_file"
     else:
-        config["chain_strategy"] = chain or "simple"
-
-    # Convert target to Path
-    target_path = Path(target)
+        config["chain_strategy"] = "simple"
 
     # Validate target
     if not target_path.exists():
         logger.error(f"❌ Target not found: {target}")
         ctx.exit(1)
 
-    # Handle directory vs file input
-    if target_path.is_dir() and not multi_file:
-        logger.warning(
-            "📁 Directory provided but --multi-file not enabled. "
-            "Use --multi-file for directory analysis."
-        )
+    # Directory targets always use multi-file mode
+    if is_directory and not use_multi_file:
+        logger.error("❌ Internal error: directory should auto-enable multi-file")
         ctx.exit(1)
 
     logger.info(f"🚀 Starting documentation generation for: {target}")
     logger.info(f"📊 Chain strategy: {config.get('chain_strategy', 'simple')}")
-    logger.info(f"🔗 Multi-file mode: {multi_file}")
+    logger.info(f"🔗 Multi-file mode: {use_multi_file}")
+    logger.info(f"🎯 Target type: {'directory' if is_directory else 'file'}")
 
     start_time = time.time()
 
@@ -270,7 +271,7 @@ def generate(
             logger.info(f"⏱️  Time: {elapsed_time:.2f} seconds")
 
             # Show multi-file specific stats
-            if multi_file and "multi_file_stats" in result:
+            if use_multi_file and "multi_file_stats" in result:
                 stats = result["multi_file_stats"]
                 logger.info(f"📊 Multi-file stats:")
                 logger.info(f"  - Groups analyzed: {stats.get('groups', 0)}")
@@ -530,6 +531,12 @@ def init(output):
     except Exception as e:
         click.echo(f"❌ Failed to create configuration file: {e}", err=True)
         sys.exit(1)
+
+
+@cli.command()
+def version():
+    """Show the current version of DocGenAI."""
+    click.echo(f"DocGenAI version {__version__}")
 
 
 if __name__ == "__main__":

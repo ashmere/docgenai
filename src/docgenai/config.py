@@ -81,13 +81,13 @@ def get_default_config() -> Dict[str, Any]:
             "summary_template": "directory_summary.md",
             "footer_template": "default_footer.md",
             "extended_footer_template": "default_extended_footer.md",
-            "use_extended_footer": False,
+            "use_extended_footer": True,
             "custom_templates_dir": "templates",
             "allow_custom_templates": True,
             "author": "",
             "organization": "",
             "project_name": "",
-            "version": "1.0.0",
+            "project_version": "",  # User's project version (optional)
         },
         "generation": {
             "file_patterns": [

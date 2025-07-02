@@ -389,6 +389,7 @@ This plan represents a complete reimagining of DocGenAI with DeepSeek-V3 at its 
 Based on analysis of generated sample output compared to demo quality, significant improvements are needed in documentation structure and audience focus. The current approach generates generic documentation that serves neither developers nor users effectively.
 
 **Key Issues Identified:**
+
 - Generic descriptions instead of specific file interactions
 - No clear "purpose" sections explaining the "why"
 - Module structure documentation but not relationship-focused
@@ -397,6 +398,7 @@ Based on analysis of generated sample output compared to demo quality, significa
 
 **Demo Quality Reference:**
 The `test_output/multi_file_demo.md` demonstrates superior structure with:
+
 - ✅ **Overall Purpose** - Clear "why does this exist" explanation
 - ✅ **File Interactions** - Specific file-by-file relationship breakdown
 - ✅ **Class Relationships** - Core abstractions and how they connect
@@ -405,7 +407,9 @@ The `test_output/multi_file_demo.md` demonstrates superior structure with:
 ### Multi-Audience Documentation Strategy
 
 #### Primary Audience: Software Engineers (Systems Architecture Focus)
+
 **Requirements:**
+
 - Deep technical understanding of system architecture
 - File interaction patterns and module dependencies
 - Class relationship diagrams and strategic abstractions
@@ -414,7 +418,9 @@ The `test_output/multi_file_demo.md` demonstrates superior structure with:
 - Microservices architecture insights
 
 #### Secondary Audience: Application Users
+
 **Requirements:**
+
 - How to use the tool effectively
 - Command-line interface with practical examples
 - Configuration options and setup guidance
@@ -428,6 +434,7 @@ The `test_output/multi_file_demo.md` demonstrates superior structure with:
 **Chosen Approach: Module-Level + Strategic Class-Level**
 
 **Rationale for Microservices Architecture:**
+
 - **Service Boundaries**: Module-level shows clear service boundaries and contracts
 - **API Interfaces**: Class-level for key interface/contract classes only
 - **Deployment Mapping**: Modules often map to deployable services
@@ -436,6 +443,7 @@ The `test_output/multi_file_demo.md` demonstrates superior structure with:
 - **Architectural Stability**: Less volatile than method-level analysis
 
 **Implementation Strategy:**
+
 - **Module-level** for overall architecture and service interactions
 - **Class-level** for key interfaces, contracts, and architectural components
 - **Method-level** only for critical integration points or complex algorithms
@@ -443,6 +451,7 @@ The `test_output/multi_file_demo.md` demonstrates superior structure with:
 ### Enhanced Prompt Architecture
 
 #### Developer Documentation Prompts
+
 ```python
 DEVELOPER_MULTI_FILE_PROMPT = """
 Analyze this codebase for software engineers with systems architecture focus:
@@ -478,6 +487,7 @@ Analyze this codebase for software engineers with systems architecture focus:
 ```
 
 #### User Documentation Prompts
+
 ```python
 USER_DOCUMENTATION_PROMPT = """
 Create user documentation for application users:
@@ -507,6 +517,7 @@ Create user documentation for application users:
 ### Project Type Template System
 
 **Supported Project Types:**
+
 ```python
 PROJECT_TEMPLATES = {
     'microservice': {
@@ -529,6 +540,7 @@ PROJECT_TEMPLATES = {
 ```
 
 **Template Customization Support:**
+
 - User-defined template directories
 - Custom section definitions
 - Project-specific prompt modifications
@@ -537,6 +549,7 @@ PROJECT_TEMPLATES = {
 ### Configuration Enhancements
 
 #### New Configuration Parameters
+
 ```yaml
 # config.yaml additions
 documentation:
@@ -558,6 +571,7 @@ analysis:
 ```
 
 #### Enhanced CLI Options
+
 ```bash
 # New CLI options
 --doc-type developer|user|both        # Override default both
@@ -573,6 +587,7 @@ analysis:
 **Roadmap Item: Visual Architecture Diagrams**
 
 #### Diagram-Ready Data Structure
+
 ```python
 class ArchitectureAnalysis:
     def __init__(self):
@@ -592,6 +607,7 @@ class ArchitectureAnalysis:
 ```
 
 #### Future Diagram Generation Chain
+
 ```python
 def architecture_diagram_chain():
     """Roadmap: Generate visual architecture diagrams"""
@@ -605,6 +621,7 @@ def architecture_diagram_chain():
 ### Expected Output Structure
 
 #### Developer Documentation Example
+
 ```markdown
 # MyService Developer Documentation
 
@@ -633,10 +650,12 @@ def architecture_diagram_chain():
 ```
 
 #### User Documentation Example
+
 ```markdown
 # MyService User Guide
 
 ## 1. Quick Start
+
 ```bash
 # Install and run
 docker run myservice:latest
@@ -644,6 +663,7 @@ curl http://localhost:8080/health
 ```
 
 ## 2. Command Line Interface
+
 ```bash
 # Start service
 myservice start --port 8080 --config config.yaml
@@ -656,6 +676,7 @@ myservice user create --email user@example.com
 ```
 
 ## 3. Configuration Guide
+
 ```yaml
 # config.yaml
 server:
@@ -665,11 +686,11 @@ auth:
   jwt_secret: your-secret-key
   token_expiry: 24h
 ```
-```
 
 ### Implementation Phases
 
 #### Phase 1: Enhanced Prompt System (Immediate)
+
 - ✅ **Approved**: Module + Strategic Class analysis level
 - [ ] Update prompt templates with new structure
 - [ ] Add microservices architecture focus
@@ -677,18 +698,21 @@ auth:
 - [ ] Create dual-audience prompt chains
 
 #### Phase 2: Configuration & CLI (Immediate)
+
 - [ ] Add documentation type configuration parameters
 - [ ] Implement CLI options for document type selection
 - [ ] Add project type auto-detection logic
 - [ ] Support custom template directories
 
 #### Phase 3: Template System (Next Phase)
+
 - [ ] Create project type template system
 - [ ] Add user customization support
 - [ ] Template validation and loading
 - [ ] Documentation for template creation
 
 #### Phase 4: Visual Diagrams (Roadmap)
+
 - [ ] Implement architecture analysis data structure
 - [ ] Add Mermaid diagram generation
 - [ ] Add PlantUML diagram support
@@ -697,6 +721,7 @@ auth:
 ### Success Metrics
 
 #### Documentation Quality Improvements
+
 - **Structure**: Match demo quality with clear sections
 - **Developer Focus**: Actionable insights for software engineers
 - **User Focus**: Practical guidance for application users
@@ -704,12 +729,14 @@ auth:
 - **Relationships**: Specific file and module interaction analysis
 
 #### Multi-Audience Success
+
 - **Developer Docs**: Technical depth with architectural insights
 - **User Docs**: Practical usage with CLI examples
 - **Separation**: Clear audience targeting
 - **Customization**: Flexible template and configuration system
 
 #### Technical Implementation
+
 - **Backward Compatibility**: Existing workflows continue to work
 - **Performance**: No significant impact on generation time
 - **Token Efficiency**: Optimized prompts for context limits
