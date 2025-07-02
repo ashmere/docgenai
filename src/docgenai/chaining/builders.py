@@ -234,16 +234,17 @@ Create final architecture documentation:""",
     @staticmethod
     def get_available_chains() -> Dict[str, str]:
         """
-        Get list of available pre-built chains.
+        Get available chain types and their descriptions.
 
         Returns:
-            Dictionary mapping chain names to descriptions
+            Dictionary mapping chain type names to descriptions
         """
         return {
-            "simple": "Single-step documentation generation (current behavior)",
+            "simple": "Single-step documentation generation",
             "enhanced": "Multi-step analysis, generation, and enhancement",
             "architecture": "Architecture documentation with diagram specifications",
-            "custom": "User-defined custom chain configuration",
+            "multi_file": "Multi-file analysis with cross-file relationships",
+            "codebase": "Comprehensive codebase analysis with synthesis",
         }
 
     @classmethod
@@ -253,10 +254,13 @@ Create final architecture documentation:""",
 
         Args:
             chain_type: Type of chain to create
-            **kwargs: Additional arguments for custom chains
+            **kwargs: Additional arguments for chain creation
 
         Returns:
-            PromptChain of the specified type
+            PromptChain instance
+
+        Raises:
+            ValueError: If chain_type is not recognized
         """
         if chain_type == "simple":
             return cls.simple_documentation_chain()
@@ -264,10 +268,249 @@ Create final architecture documentation:""",
             return cls.enhanced_documentation_chain()
         elif chain_type == "architecture":
             return cls.architecture_diagram_chain()
+        elif chain_type == "multi_file":
+            return cls.multi_file_analysis_chain()
+        elif chain_type == "codebase":
+            return cls.codebase_analysis_chain()
         elif chain_type == "custom":
-            return cls.custom_chain(**kwargs)
+            # Custom chains require steps to be provided
+            steps = kwargs.get("steps")
+            if not steps:
+                raise ValueError("Custom chains require 'steps' parameter")
+            return cls.custom_chain(steps, **kwargs)
         else:
             available = list(cls.get_available_chains().keys())
             raise ValueError(
                 f"Unknown chain type '{chain_type}'. " f"Available types: {available}"
             )
+
+    @staticmethod
+    def multi_file_analysis_chain() -> PromptChain:
+        """
+        Create a chain for multi-file analysis and documentation.
+
+        Steps:
+        1. Analyze the group of files and their relationships
+        2. Identify cross-file dependencies and architecture
+        3. Generate comprehensive documentation for the file group
+
+        Returns:
+            PromptChain for multi-file analysis and documentation
+        """
+        steps = [
+            PromptStep(
+                name="file_group_overview",
+                prompt_template="""
+Analyze this group of related files and provide an overview:
+
+{files_summary}
+
+{files_content}
+
+Provide:
+1. Overall purpose of this file group
+2. Key relationships between files
+3. Main architectural patterns
+4. Dependencies and interfaces
+
+File Group Overview:""",
+                config=StepConfig(timeout=240.0),
+                metadata={"type": "multi_file_overview", "version": "1.0"},
+            ),
+            PromptStep(
+                name="cross_file_analysis",
+                prompt_template="""
+Based on the file group overview:
+
+{file_group_overview}
+
+Analyze the cross-file relationships in detail:
+
+{files_content}
+
+Focus on:
+1. How files interact with each other
+2. Shared data structures and interfaces
+3. Dependencies and coupling
+4. Communication patterns
+5. Potential architectural improvements
+
+Cross-file Analysis:""",
+                depends_on=["file_group_overview"],
+                config=StepConfig(timeout=300.0),
+                metadata={"type": "cross_file_analysis", "version": "1.0"},
+            ),
+            PromptStep(
+                name="comprehensive_documentation",
+                prompt_template="""
+Create comprehensive documentation for this group of {file_count} related files:
+
+Overview: {file_group_overview}
+
+Cross-file Analysis: {cross_file_analysis}
+
+Files: {files_content}
+
+Generate documentation that includes:
+1. Module/package overview
+2. Individual file descriptions
+3. Cross-file relationships and dependencies
+4. Architecture and design patterns
+5. Usage examples and integration points
+6. API documentation where applicable
+
+Comprehensive Documentation:""",
+                depends_on=["file_group_overview", "cross_file_analysis"],
+                config=StepConfig(timeout=360.0),
+                metadata={"type": "multi_file_documentation", "version": "1.0"},
+            ),
+        ]
+
+        return PromptChain(
+            steps=steps,
+            name="MultiFileAnalysis",
+            fail_fast=False,  # Continue even if some steps fail
+        )
+
+    @staticmethod
+    def codebase_analysis_chain() -> PromptChain:
+        """
+        Create a chain for comprehensive codebase analysis and documentation.
+
+        For large codebases with multiple file groups, this chain:
+        1. Analyzes individual groups
+        2. Identifies cross-group relationships
+        3. Synthesizes comprehensive overview
+        4. Creates structured documentation
+
+        Returns:
+            PromptChain for codebase-level analysis
+        """
+        steps = [
+            PromptStep(
+                name="codebase_overview",
+                prompt_template="""
+Analyze this codebase structure and provide a high-level overview:
+
+**Codebase Structure:**
+- Total files: {total_files}
+- Analysis groups: {groups}
+- Primary directories: {primary_directories}
+
+**Group Details:**
+{group_summaries}
+
+**Large Files (analyzed separately):**
+{large_files}
+
+Provide:
+1. Overall purpose and architecture of this codebase
+2. Main modules and their responsibilities
+3. Key design patterns and architectural decisions
+4. Technology stack and dependencies
+
+Codebase Overview:""",
+                config=StepConfig(timeout=300.0),
+                metadata={"type": "codebase_overview", "version": "1.0"},
+            ),
+            PromptStep(
+                name="cross_group_analysis",
+                prompt_template="""
+Based on the codebase overview:
+
+{codebase_overview}
+
+Analyze the relationships between different modules/groups:
+
+**Group Details:**
+{group_summaries}
+
+Focus on:
+1. How different modules interact with each other
+2. Data flow between components
+3. Shared interfaces and contracts
+4. Dependencies and coupling patterns
+5. Integration points and APIs
+
+Cross-Group Analysis:""",
+                depends_on=["codebase_overview"],
+                config=StepConfig(timeout=360.0),
+                metadata={"type": "cross_group_analysis", "version": "1.0"},
+            ),
+            PromptStep(
+                name="architecture_synthesis",
+                prompt_template="""
+Create a comprehensive architectural analysis:
+
+**Codebase Overview:** {codebase_overview}
+
+**Cross-Group Analysis:** {cross_group_analysis}
+
+**Detailed Group Information:**
+{group_summaries}
+
+Synthesize into:
+1. **System Architecture**: High-level design and component relationships
+2. **Module Structure**: How code is organized and why
+3. **Key Abstractions**: Main concepts and design patterns
+4. **Integration Patterns**: How components communicate
+5. **Extensibility**: How the system can be extended
+6. **Best Practices**: Coding patterns and conventions used
+
+Architecture Synthesis:""",
+                depends_on=["codebase_overview", "cross_group_analysis"],
+                config=StepConfig(timeout=420.0),
+                metadata={"type": "architecture_synthesis", "version": "1.0"},
+            ),
+            PromptStep(
+                name="comprehensive_documentation",
+                prompt_template="""
+Create comprehensive documentation for this codebase:
+
+**Overview:** {codebase_overview}
+
+**Architecture:** {architecture_synthesis}
+
+**Cross-Group Analysis:** {cross_group_analysis}
+
+Generate structured documentation including:
+
+# Codebase Documentation
+
+## 1. Project Overview
+[Brief description and purpose]
+
+## 2. Architecture
+[System design and component relationships]
+
+## 3. Module Structure
+[Organization and responsibilities]
+
+## 4. Key Components
+[Main classes, functions, and interfaces]
+
+## 5. Integration Guide
+[How components work together]
+
+## 6. Development Guide
+[Patterns, conventions, and best practices]
+
+## 7. Extension Points
+[How to extend the system]
+
+Comprehensive Documentation:""",
+                depends_on=[
+                    "codebase_overview",
+                    "cross_group_analysis",
+                    "architecture_synthesis",
+                ],
+                config=StepConfig(timeout=480.0),
+                metadata={"type": "comprehensive_documentation", "version": "1.0"},
+            ),
+        ]
+
+        return PromptChain(
+            steps=steps,
+            name="CodebaseAnalysis",
+            fail_fast=False,
+        )

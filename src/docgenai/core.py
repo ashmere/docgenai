@@ -741,6 +741,392 @@ Files analyzed: {len(all_code_content)}
 
 # Convenience functions for backward compatibility
 def generate_documentation(
+    target_path: Path,
+    output_dir: str = "output",
+    template_file: Optional[str] = None,
+    style_guide_file: Optional[str] = None,
+    config: Optional[Dict[str, Any]] = None,
+    diagrams: bool = False,
+) -> Dict[str, Any]:
+    """
+    Generate documentation for files or directories with multi-file support.
+
+    Args:
+        target_path: Path to source file or directory
+        output_dir: Output directory
+        template_file: Custom template file path
+        style_guide_file: Custom style guide file path
+        config: Configuration dictionary
+        diagrams: Include diagrams in documentation
+
+    Returns:
+        Generation result dictionary
+    """
+    from .chaining.context import ChainContext
+    from .models import create_model
+    from .multi_file_analyzer import MultiFileAnalyzer
+
+    if config is None:
+        config = load_config()
+
+    # Override output directory
+    config["output"]["dir"] = output_dir
+
+    # Handle custom template and style guide
+    if template_file:
+        config["templates"]["template_file"] = template_file
+    if style_guide_file:
+        config["templates"]["style_guide_file"] = style_guide_file
+
+    # Handle diagrams
+    config["output"]["include_diagrams"] = diagrams
+
+    # Check if multi-file mode is enabled
+    multi_file_config = config.get("multi_file", {})
+    multi_file_enabled = multi_file_config.get("enabled", False)
+
+    logger.info(f"🎯 Target: {target_path}")
+    logger.info(f"📁 Output: {output_dir}")
+    logger.info(f"🔗 Multi-file: {multi_file_enabled}")
+
+    # Create model
+    model = create_model(config)
+
+    if target_path.is_file() and not multi_file_enabled:
+        # Single file mode (existing behavior)
+        generator = DocumentationGenerator(model, config)
+        result_path = generator.process_file(target_path)
+        return {
+            "output_files": [result_path] if result_path else [],
+            "success": result_path is not None,
+        }
+
+    elif target_path.is_dir() and multi_file_enabled:
+        # Multi-file directory analysis
+        return _generate_multi_file_documentation(
+            target_path, model, config, output_dir
+        )
+
+    elif target_path.is_file() and multi_file_enabled:
+        # Single file with multi-file context (analyze related files)
+        parent_dir = target_path.parent
+        return _generate_multi_file_documentation(
+            parent_dir, model, config, output_dir, focus_file=target_path
+        )
+
+    else:
+        # Fallback to directory mode
+        generator = DocumentationGenerator(model, config)
+        results = generator.process_directory(target_path)
+        return {
+            "output_files": results,
+            "success": len(results) > 0,
+        }
+
+
+def _generate_multi_file_documentation(
+    target_path: Path,
+    model: AIModel,
+    config: Dict[str, Any],
+    output_dir: str,
+    focus_file: Optional[Path] = None,
+) -> Dict[str, Any]:
+    """
+    Generate documentation using multi-file analysis.
+
+    Args:
+        target_path: Directory to analyze
+        model: AI model instance
+        config: Configuration
+        output_dir: Output directory
+        focus_file: Optional file to focus on
+
+    Returns:
+        Generation result dictionary
+    """
+    from .chaining.context import ChainContext
+    from .multi_file_analyzer import MultiFileAnalyzer
+
+    logger.info("🔗 Starting multi-file analysis...")
+
+    # Initialize analyzer
+    analyzer = MultiFileAnalyzer(config)
+
+    # Analyze codebase structure
+    codebase_structure = analyzer.analyze_codebase_structure(target_path)
+
+    logger.info(f"📊 Codebase structure:")
+    logger.info(f"  - Total files: {codebase_structure['total_files']}")
+    logger.info(f"  - Analysis groups: {codebase_structure['groups']}")
+    logger.info(f"  - Requires synthesis: {codebase_structure['requires_synthesis']}")
+
+    # Get chain strategy
+    chain_strategy = config.get("chain_strategy", "multi_file")
+
+    # Handle different strategies
+    if codebase_structure["groups"] == 0:
+        logger.warning("⚠️  No suitable files found for analysis")
+        return {"output_files": [], "success": False, "error": "No suitable files"}
+
+    elif codebase_structure["groups"] == 1:
+        # Single group - use multi-file analysis
+        return _analyze_single_group(
+            analyzer, model, config, output_dir, codebase_structure
+        )
+
+    else:
+        # Multiple groups - use codebase analysis with synthesis
+        return _analyze_multiple_groups(
+            analyzer, model, config, output_dir, codebase_structure
+        )
+
+
+def _analyze_single_group(
+    analyzer: "MultiFileAnalyzer",
+    model: AIModel,
+    config: Dict[str, Any],
+    output_dir: str,
+    codebase_structure: Dict[str, Any],
+) -> Dict[str, Any]:
+    """Analyze a single group of files."""
+    from .chaining.context import ChainContext
+
+    logger.info("📝 Analyzing single file group...")
+
+    # Get the group
+    source_files = analyzer._find_source_files(Path(codebase_structure["root_path"]))
+    groups = analyzer.group_files_for_analysis(source_files)
+
+    if not groups:
+        return {"output_files": [], "success": False, "error": "No groups found"}
+
+    file_group = groups[0]
+
+    # Prepare context
+    context = analyzer.prepare_multi_file_context(file_group)
+
+    # Create chain
+    chain = ChainBuilder.multi_file_analysis_chain()
+
+    # Execute chain
+    chain_context = ChainContext()
+    chain_context.set_input("files_content", context["files_content"])
+    chain_context.set_input("files_summary", context["files_summary"])
+    chain_context.set_input("file_count", context["file_count"])
+    chain_context.set_input("file_names", context["file_names"])
+
+    # Execute steps
+    for step in chain.steps:
+        try:
+            prompt = step.build_prompt(chain_context)
+            response = model.generate_raw_response(prompt)
+
+            # Store result
+            from .chaining.context import StepResult
+
+            result = StepResult(
+                step_name=step.name, output=response, execution_time=0.0
+            )
+            chain_context.add_result(result)
+
+            # Add to inputs for next step
+            chain_context.set_input(step.name, response)
+
+        except Exception as e:
+            logger.error(f"❌ Step {step.name} failed: {e}")
+            continue
+
+    # Get final documentation
+    final_docs = chain_context.get_output("comprehensive_documentation")
+    if not final_docs:
+        return {
+            "output_files": [],
+            "success": False,
+            "error": "Documentation generation failed",
+        }
+
+    # Save output
+    output_path = Path(output_dir) / "multi_file_documentation.md"
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+
+    with open(output_path, "w", encoding="utf-8") as f:
+        f.write("# Multi-File Documentation\n\n")
+        f.write(f"**Files analyzed:** {', '.join(context['file_names'])}\n\n")
+        f.write("---\n\n")
+        f.write(clean_documentation_output(final_docs))
+
+    logger.info(f"✅ Multi-file documentation saved: {output_path}")
+
+    return {
+        "output_files": [str(output_path)],
+        "success": True,
+        "multi_file_stats": {
+            "groups": 1,
+            "total_files": len(file_group),
+            "synthesis_used": False,
+        },
+    }
+
+
+def _analyze_multiple_groups(
+    analyzer: "MultiFileAnalyzer",
+    model: AIModel,
+    config: Dict[str, Any],
+    output_dir: str,
+    codebase_structure: Dict[str, Any],
+) -> Dict[str, Any]:
+    """Analyze multiple groups with synthesis."""
+    from .chaining.context import ChainContext
+
+    logger.info(
+        f"🏗️  Analyzing {codebase_structure['groups']} file groups with synthesis..."
+    )
+
+    # Get all groups
+    source_files = analyzer._find_source_files(Path(codebase_structure["root_path"]))
+    groups = analyzer.group_files_for_analysis(source_files)
+
+    # Create group summaries
+    group_summaries = analyzer.create_group_summaries(groups)
+
+    # Prepare synthesis context
+    primary_directories = list(set(s["primary_directory"] for s in group_summaries))
+    large_files_info = (
+        "\n".join(
+            [
+                f"- {lf['file']} ({lf['size']} chars): {lf['reason']}"
+                for lf in codebase_structure["large_files"]
+            ]
+        )
+        if codebase_structure["large_files"]
+        else "None"
+    )
+
+    group_summaries_text = "\n".join(
+        [
+            f"**Group {s['group_id']}** ({s['primary_directory']}):\n"
+            f"  - Files: {', '.join(s['files'])}\n"
+            f"  - Components: {', '.join(s['key_components'][:5])}\n"
+            f"  - Tokens: {s['estimated_tokens']:.0f}\n"
+            for s in group_summaries
+        ]
+    )
+
+    # Create codebase analysis chain
+    chain = ChainBuilder.codebase_analysis_chain()
+
+    # Execute chain
+    chain_context = ChainContext()
+    chain_context.set_input("total_files", codebase_structure["total_files"])
+    chain_context.set_input("groups", codebase_structure["groups"])
+    chain_context.set_input("primary_directories", ", ".join(primary_directories))
+    chain_context.set_input("group_summaries", group_summaries_text)
+    chain_context.set_input("large_files", large_files_info)
+
+    # Execute steps
+    for step in chain.steps:
+        try:
+            prompt = step.build_prompt(chain_context)
+            response = model.generate_raw_response(prompt)
+
+            # Store result
+            from .chaining.context import StepResult
+
+            result = StepResult(
+                step_name=step.name, output=response, execution_time=0.0
+            )
+            chain_context.add_result(result)
+
+            # Add to inputs for next step
+            chain_context.set_input(step.name, response)
+
+        except Exception as e:
+            logger.error(f"❌ Step {step.name} failed: {e}")
+            continue
+
+    # Get final documentation
+    final_docs = chain_context.get_output("comprehensive_documentation")
+    if not final_docs:
+        return {"output_files": [], "success": False, "error": "Synthesis failed"}
+
+    # Create output structure
+    output_path = Path(output_dir)
+    output_path.mkdir(parents=True, exist_ok=True)
+
+    # Save comprehensive documentation
+    main_doc_path = output_path / "codebase_documentation.md"
+    with open(main_doc_path, "w", encoding="utf-8") as f:
+        f.write("# Codebase Documentation\n\n")
+        f.write(f"**Analysis Date:** {time.strftime('%Y-%m-%d %H:%M:%S')}\n\n")
+        f.write(f"**Total Files:** {codebase_structure['total_files']}\n\n")
+        f.write(f"**Analysis Groups:** {codebase_structure['groups']}\n\n")
+        f.write("---\n\n")
+        f.write(clean_documentation_output(final_docs))
+
+    # Save individual group documentation
+    output_files = [str(main_doc_path)]
+
+    for i, group in enumerate(groups):
+        if len(group) > 0:
+            try:
+                # Generate individual group documentation
+                context = analyzer.prepare_multi_file_context(group)
+                group_chain = ChainBuilder.multi_file_analysis_chain()
+
+                group_context = ChainContext()
+                group_context.set_input("files_content", context["files_content"])
+                group_context.set_input("files_summary", context["files_summary"])
+                group_context.set_input("file_count", context["file_count"])
+                group_context.set_input("file_names", context["file_names"])
+
+                # Execute group analysis
+                for step in group_chain.steps:
+                    try:
+                        prompt = step.build_prompt(group_context)
+                        response = model.generate_raw_response(prompt)
+
+                        from .chaining.context import StepResult
+
+                        result = StepResult(
+                            step_name=step.name, output=response, execution_time=0.0
+                        )
+                        group_context.add_result(result)
+                        group_context.set_input(step.name, response)
+
+                    except Exception as e:
+                        logger.warning(f"⚠️  Group {i+1} step {step.name} failed: {e}")
+                        continue
+
+                # Save group documentation
+                group_docs = group_context.get_output("comprehensive_documentation")
+                if group_docs:
+                    group_path = output_path / f"group_{i+1}_documentation.md"
+                    with open(group_path, "w", encoding="utf-8") as f:
+                        f.write(f"# Group {i+1} Documentation\n\n")
+                        f.write(f"**Files:** {', '.join(context['file_names'])}\n\n")
+                        f.write("---\n\n")
+                        f.write(clean_documentation_output(group_docs))
+
+                    output_files.append(str(group_path))
+                    logger.info(f"📄 Group {i+1} documentation saved: {group_path}")
+
+            except Exception as e:
+                logger.warning(f"⚠️  Failed to generate group {i+1} documentation: {e}")
+
+    logger.info(f"✅ Codebase analysis complete: {len(output_files)} files generated")
+
+    return {
+        "output_files": output_files,
+        "success": True,
+        "multi_file_stats": {
+            "groups": codebase_structure["groups"],
+            "total_files": codebase_structure["total_files"],
+            "synthesis_used": True,
+        },
+    }
+
+
+def generate_single_file_documentation(
     file_path: str,
     output_dir: str = "output",
     config: Optional[Dict[str, Any]] = None,
@@ -748,7 +1134,7 @@ def generate_documentation(
     verbose: bool = False,
 ) -> Dict[str, Any]:
     """
-    Generate documentation for a single file (convenience function).
+    Generate documentation for a single file (backward compatibility).
 
     Args:
         file_path: Path to source file
@@ -760,25 +1146,29 @@ def generate_documentation(
     Returns:
         Generation result dictionary
     """
-    from .models import create_model
-
     if config is None:
-        from .config import load_config
-
         config = load_config()
 
     # Override output directory
     config["output"]["dir"] = output_dir
     config["output"]["include_architecture"] = include_architecture
 
-    # Create model and generator
-    model = create_model(config)
-    generator = DocumentationGenerator(model, config)
+    # Disable multi-file mode for backward compatibility
+    config["multi_file"] = {"enabled": False}
 
-    # Process file
-    result_path = generator.process_file(Path(file_path))
+    # Use the new function
+    result = generate_documentation(
+        target_path=Path(file_path),
+        output_dir=output_dir,
+        config=config,
+    )
 
-    return {"output_file": result_path, "success": result_path is not None}
+    # Convert to old format
+    output_files = result.get("output_files", [])
+    return {
+        "output_file": output_files[0] if output_files else None,
+        "success": result.get("success", False),
+    }
 
 
 def generate_directory_documentation(
@@ -790,7 +1180,7 @@ def generate_directory_documentation(
     verbose: bool = False,
 ) -> Dict[str, Any]:
     """
-    Generate documentation for a directory (convenience function).
+    Generate documentation for a directory (backward compatibility).
 
     Args:
         dir_path: Path to source directory
@@ -803,11 +1193,7 @@ def generate_directory_documentation(
     Returns:
         Generation result dictionary
     """
-    from .models import create_model
-
     if config is None:
-        from .config import load_config
-
         config = load_config()
 
     # Override configuration
@@ -816,17 +1202,20 @@ def generate_directory_documentation(
     if file_patterns:
         config["generation"]["file_patterns"] = file_patterns
 
-    # Create model and generator
-    model = create_model(config)
-    generator = DocumentationGenerator(model, config)
+    # Disable multi-file mode for backward compatibility
+    config["multi_file"] = {"enabled": False}
 
-    # Process directory
-    results = generator.process_directory(Path(dir_path))
+    # Use the new function
+    result = generate_documentation(
+        target_path=Path(dir_path),
+        output_dir=output_dir,
+        config=config,
+    )
 
     return {
-        "output_files": results,
-        "files_processed": len(results),
-        "success": len(results) > 0,
+        "output_files": result.get("output_files", []),
+        "files_processed": len(result.get("output_files", [])),
+        "success": result.get("success", False),
     }
 
 

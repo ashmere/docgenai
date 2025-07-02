@@ -13,7 +13,7 @@ from pathlib import Path
 import click
 
 from .config import create_default_config_file, load_config
-from .core import DocumentationGenerator
+from .core import DocumentationGenerator, generate_documentation
 from .models import create_model
 
 
@@ -66,14 +66,29 @@ def cli(ctx, config, verbose):
 
 
 @cli.command()
-@click.argument("path", type=click.Path(exists=True))
+@click.argument("target", type=click.Path(exists=True))
 @click.option(
     "--output-dir", "-o", default="output", help="Output directory for generated docs"
 )
 @click.option(
-    "--architecture/--no-architecture",
-    default=True,
-    help="Include/exclude architecture analysis",
+    "--template",
+    type=click.Path(exists=True),
+    help="Path to template file for documentation generation",
+)
+@click.option(
+    "--style-guide",
+    type=click.Path(exists=True),
+    help="Path to style guide file for documentation generation",
+)
+@click.option(
+    "--offline",
+    is_flag=True,
+    help="Force offline mode (use only cached models)",
+)
+@click.option(
+    "--diagrams",
+    is_flag=True,
+    help="Include diagrams in the generated documentation",
 )
 @click.option(
     "--no-output-cache",
@@ -81,24 +96,9 @@ def cli(ctx, config, verbose):
     help="Disable output cache for this run",
 )
 @click.option(
-    "--extended-footer",
+    "--cache-clear",
     is_flag=True,
-    help="Use extended footer with detailed file and model information",
-)
-@click.option(
-    "--check-updates",
-    is_flag=True,
-    help="Check for model updates (overrides offline mode)",
-)
-@click.option(
-    "--force-download",
-    is_flag=True,
-    help="Force re-download of models even if cached",
-)
-@click.option(
-    "--offline",
-    is_flag=True,
-    help="Force offline mode (use only cached models)",
+    help="Clear all cached data",
 )
 @click.option(
     "--chain/--no-chain",
@@ -107,159 +107,154 @@ def cli(ctx, config, verbose):
 )
 @click.option(
     "--chain-strategy",
-    type=click.Choice(["simple", "enhanced", "architecture"]),
+    type=click.Choice(["simple", "enhanced", "architecture", "multi_file"]),
     help="Prompt chain strategy to use",
+)
+@click.option(
+    "--multi-file/--single-file",
+    default=False,
+    help="Enable multi-file analysis for better cross-file understanding",
+)
+@click.option(
+    "--max-files-per-group",
+    type=int,
+    default=8,
+    help="Maximum files to analyze together in multi-file mode",
 )
 @click.pass_context
 def generate(
     ctx,
-    path,
+    target,
     output_dir,
-    architecture,
-    no_output_cache,
-    extended_footer,
-    check_updates,
-    force_download,
+    template,
+    style_guide,
     offline,
+    diagrams,
+    no_output_cache,
+    cache_clear,
     chain,
     chain_strategy,
+    multi_file,
+    max_files_per_group,
 ):
     """
-    Generate comprehensive documentation for code files or directories.
+    Generate documentation for source code files.
 
-    PATH can be a single file or directory to process.
-
-    \b
-    Examples:
-        docgenai generate myfile.py
-        docgenai generate src/ --output-dir docs
-        docgenai generate . --no-architecture
-        docgenai generate src/
-        docgenai generate src/ --no-output-cache
-        docgenai generate src/ --check-updates
-        docgenai generate src/ --force-download
-        docgenai generate src/ --offline
+    TARGET can be a single file or directory. For directories,
+    use --multi-file to enable multi-file analysis.
     """
-    config = ctx.obj["config"]
-    verbose = ctx.obj.get("verbose", False)
+    import logging
+    import time
+    from pathlib import Path
+
+    from .config import load_config
+    from .core import generate_documentation
+
+    # Configure logging
+    logging.basicConfig(
+        level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+    )
+
+    logger = logging.getLogger(__name__)
+
+    # Load configuration
+    config = load_config()
+
+    # Handle offline mode
+    if offline:
+        config["model"]["offline_mode"] = True
+        config["model"]["local_files_only"] = True
+        config["model"]["check_for_updates"] = False
+
+    # Handle cache settings
+    if no_output_cache:
+        config["cache"]["enabled"] = False
+    elif cache_clear:
+        from .cache import clear_cache
+
+        clear_cache()
+
+    # Handle multi-file settings
+    if multi_file:
+        config["multi_file"] = {
+            "enabled": True,
+            "max_files_per_group": max_files_per_group,
+        }
+    else:
+        config["multi_file"] = {"enabled": False}
+
+    # Determine chain strategy
+    if chain_strategy:
+        config["chain_strategy"] = chain_strategy
+    elif multi_file:
+        # Auto-select strategy based on input
+        target_path = Path(target)
+        if target_path.is_dir():
+            # For directories, use codebase analysis if multi-file enabled
+            config["chain_strategy"] = "codebase"
+        else:
+            config["chain_strategy"] = "multi_file"
+    else:
+        config["chain_strategy"] = chain or "simple"
+
+    # Convert target to Path
+    target_path = Path(target)
+
+    # Validate target
+    if not target_path.exists():
+        logger.error(f"❌ Target not found: {target}")
+        ctx.exit(1)
+
+    # Handle directory vs file input
+    if target_path.is_dir() and not multi_file:
+        logger.warning(
+            "📁 Directory provided but --multi-file not enabled. "
+            "Use --multi-file for directory analysis."
+        )
+        ctx.exit(1)
+
+    logger.info(f"🚀 Starting documentation generation for: {target}")
+    logger.info(f"📊 Chain strategy: {config.get('chain_strategy', 'simple')}")
+    logger.info(f"🔗 Multi-file mode: {multi_file}")
+
+    start_time = time.time()
 
     try:
-        click.echo("🚀 Starting DocGenAI documentation generation...")
+        result = generate_documentation(
+            target_path,
+            output_dir=output_dir,
+            template_file=template,
+            style_guide_file=style_guide,
+            config=config,
+            diagrams=diagrams,
+        )
 
-        # Show platform information
-        import platform
+        elapsed_time = time.time() - start_time
 
-        click.echo(f"🖥️  Platform: {platform.system()}")
+        if result.get("success", False):
+            logger.info(f"✅ Documentation generated successfully!")
+            logger.info(f"📄 Output: {result.get('output_files', [])}")
+            logger.info(f"⏱️  Time: {elapsed_time:.2f} seconds")
 
-        # Apply CLI overrides to model configuration
-        model_config = config.copy()
-        if check_updates:
-            model_config["model"]["check_for_updates"] = True
-            model_config["model"]["offline_mode"] = False
-            model_config["model"]["local_files_only"] = False
-            click.echo("🔄 Model update checking enabled")
-
-        if force_download:
-            model_config["model"]["force_download"] = True
-            model_config["model"]["check_for_updates"] = True
-            model_config["model"]["offline_mode"] = False
-            model_config["model"]["local_files_only"] = False
-            click.echo("⬇️  Force download enabled")
-
-        if offline:
-            model_config["model"]["offline_mode"] = True
-            model_config["model"]["check_for_updates"] = False
-            model_config["model"]["local_files_only"] = True
-            click.echo("📴 Offline mode enabled")
-
-        # Show offline/online status
-        if model_config["model"]["offline_mode"]:
-            click.echo("📴 Mode: Offline (using cached models only)")
+            # Show multi-file specific stats
+            if multi_file and "multi_file_stats" in result:
+                stats = result["multi_file_stats"]
+                logger.info(f"📊 Multi-file stats:")
+                logger.info(f"  - Groups analyzed: {stats.get('groups', 0)}")
+                logger.info(f"  - Total files: {stats.get('total_files', 0)}")
+                logger.info(f"  - Synthesis: {stats.get('synthesis_used', False)}")
         else:
-            click.echo("🌐 Mode: Online (may download/update models)")
+            logger.error(f"❌ Documentation generation failed")
+            logger.error(f"Error: {result.get('error', 'Unknown error')}")
+            ctx.exit(1)
 
-        # Initialize model
-        click.echo("🤖 Initializing AI model...")
-        model = create_model(model_config)
-
-        # Show model information
-        model_info = model.get_model_info()
-        click.echo(f"📍 Model: {model_info['model_path']}")
-        click.echo(f"⚙️  Backend: {model_info['backend']}")
-        click.echo(f"🔧 Temperature: {model_info['temperature']}")
-        click.echo(f"📝 Max tokens: {model_info['max_tokens']}")
-        click.echo(f"🗜️  Quantization: {model_info['quantization']}")
-
-        # Initialize generator with cache configuration
-        generator_config = model_config.copy()
-        if no_output_cache:
-            # Disable output cache for this run
-            generator_config["cache"]["enabled"] = False
-            generator_config["cache"]["generation_cache"] = False
-
-        # Update output directory in config
-        generator_config["output"]["dir"] = output_dir
-        generator_config["output"]["include_architecture"] = architecture
-        generator_config["templates"]["use_extended_footer"] = extended_footer
-
-        # Apply chaining configuration overrides
-        if chain is not None:
-            generator_config["chaining"]["enabled"] = chain
-            if chain:
-                click.echo("🔗 Prompt chaining enabled")
-            else:
-                click.echo("📝 Prompt chaining disabled")
-
-        if chain_strategy:
-            generator_config["chaining"]["default_strategy"] = chain_strategy
-            click.echo(f"🔗 Chain strategy: {chain_strategy}")
-
-        # Show chaining status
-        chaining_enabled = generator_config["chaining"]["enabled"]
-        if chaining_enabled:
-            strategy = generator_config["chaining"]["default_strategy"]
-            click.echo(f"🔗 Chaining: Enabled ({strategy} strategy)")
-        else:
-            click.echo("📝 Chaining: Disabled")
-
-        generator = DocumentationGenerator(model, generator_config)
-
-        # Process the path
-        input_path = Path(path)
-
-        if input_path.is_file():
-            click.echo(f"📄 Processing file: {input_path}")
-            result = generator.process_file(input_path)
-            if result:
-                click.echo(f"✅ Documentation generated: {result}")
-            else:
-                click.echo("❌ Failed to generate documentation")
-                sys.exit(1)
-        else:
-            click.echo(f"📁 Processing directory: {input_path}")
-            results = generator.process_directory(input_path)
-            if results:
-                click.echo(f"✅ Generated {len(results)} documentation files")
-                for result in results[:5]:  # Show first 5 results
-                    click.echo(f"   📄 {result}")
-                if len(results) > 5:
-                    click.echo(f"   ... and {len(results) - 5} more")
-            else:
-                click.echo("❌ No documentation files generated")
-                sys.exit(1)
-
-        click.echo("🎉 Documentation generation complete!")
-
-    except KeyboardInterrupt:
-        click.echo("\n⚠️  Operation cancelled by user")
-        sys.exit(1)
     except Exception as e:
-        click.echo(f"❌ Error: {e}", err=True)
-        if verbose:
+        logger.error(f"❌ Error during documentation generation: {str(e)}")
+        if ctx.obj and ctx.obj.get("debug"):
             import traceback
 
             traceback.print_exc()
-        sys.exit(1)
+        ctx.exit(1)
 
 
 @cli.command()
