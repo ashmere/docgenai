@@ -24,6 +24,7 @@ class MultiFileAnalyzer:
         """Initialize the multi-file analyzer."""
         self.config = config
         self.model_config = config.get("model", {})
+        self.doc_config = config.get("documentation", {})
 
         # Token limits for current DeepSeek-V2-Lite (32k context)
         self.max_context_tokens = 30000  # Leave buffer for output
@@ -31,13 +32,23 @@ class MultiFileAnalyzer:
         self.chars_per_token = 3.5  # Approximate for code
 
         # File grouping limits
-        self.max_files_per_group = self.model_config.get("max_files_per_group", 8)
+        self.max_files_per_group = self.doc_config.get("max_files_per_group", 8)
         self.max_file_size_chars = 15000  # Increased for real-world files
+
+        # Documentation configuration
+        self.doc_type = self.doc_config.get("doc_type", "both")
+        self.project_type = self.doc_config.get("project_type", "auto")
+        self.detail_level = self.doc_config.get(
+            "detail_level", "module_plus_strategic_class"
+        )
 
         logger.info("🔗 Multi-file analyzer initialized")
         logger.info(f"📊 Max context: {self.max_context_tokens} tokens")
         logger.info(f"📁 Max files per group: {self.max_files_per_group}")
         logger.info(f"📄 Max file size: {self.max_file_size_chars} chars")
+        logger.info(f"📋 Doc type: {self.doc_type}")
+        logger.info(f"🏗️ Project type: {self.project_type}")
+        logger.info(f"🔍 Detail level: {self.detail_level}")
 
     def group_files_for_analysis(self, file_paths: List[Path]) -> List[List[Path]]:
         """
@@ -206,6 +217,9 @@ class MultiFileAnalyzer:
             "file_count": len(file_group),
             "file_names": [str(f.name) for f in file_group],
             "estimated_tokens": estimated_tokens,
+            "doc_type": self.doc_type,
+            "project_type": self.detect_project_type(file_group),
+            "detail_level": self.detail_level,
         }
 
     def _get_relative_path(self, file_path: Path) -> str:
@@ -272,6 +286,109 @@ class MultiFileAnalyzer:
             structure = f"{len(non_empty_lines)} lines of code"
 
         return structure
+
+    def detect_project_type(self, file_group: List[Path]) -> str:
+        """
+        Detect project type based on file analysis.
+
+        Args:
+            file_group: List of files to analyze for project type
+
+        Returns:
+            Detected project type or configured type
+        """
+        if self.project_type != "auto":
+            return self.project_type
+
+        # Analyze files to detect project patterns
+        file_names = [f.name.lower() for f in file_group]
+        file_paths = [str(f).lower() for f in file_group]
+
+        # Check for microservice patterns
+        microservice_indicators = [
+            "dockerfile",
+            "docker-compose",
+            "service",
+            "api",
+            "handler",
+            "controller",
+            "middleware",
+            "router",
+            "server",
+        ]
+
+        # Check for library patterns
+        library_indicators = [
+            "setup.py",
+            "__init__.py",
+            "lib/",
+            "src/",
+            "package.json",
+            "pyproject.toml",
+            "requirements.txt",
+        ]
+
+        # Check for application patterns
+        app_indicators = [
+            "main.py",
+            "app.py",
+            "cli.py",
+            "manage.py",
+            "run.py",
+            "config.py",
+            "settings.py",
+        ]
+
+        # Check for framework patterns
+        framework_indicators = [
+            "plugin",
+            "extension",
+            "hook",
+            "template",
+            "middleware",
+            "decorator",
+            "factory",
+            "builder",
+        ]
+
+        # Count indicators
+        microservice_score = sum(
+            1
+            for indicator in microservice_indicators
+            if any(indicator in path for path in file_paths)
+        )
+        library_score = sum(
+            1
+            for indicator in library_indicators
+            if any(indicator in path for path in file_paths)
+        )
+        app_score = sum(
+            1
+            for indicator in app_indicators
+            if any(indicator in name for name in file_names)
+        )
+        framework_score = sum(
+            1
+            for indicator in framework_indicators
+            if any(indicator in path for path in file_paths)
+        )
+
+        # Determine project type based on highest score
+        scores = {
+            "microservice": microservice_score,
+            "library": library_score,
+            "application": app_score,
+            "framework": framework_score,
+        }
+
+        detected_type = max(scores, key=scores.get)
+
+        # Default to application if no clear indicators
+        if scores[detected_type] == 0:
+            detected_type = "application"
+
+        logger.info(f"🔍 Detected project type: {detected_type}")
+        return detected_type
 
     def should_use_multi_file_analysis(self, file_paths: List[Path]) -> bool:
         """

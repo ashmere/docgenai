@@ -269,9 +269,13 @@ Create final architecture documentation:""",
         elif chain_type == "architecture":
             return cls.architecture_diagram_chain()
         elif chain_type == "multi_file":
-            return cls.multi_file_analysis_chain()
+            doc_type = kwargs.get("doc_type", "developer")
+            project_type = kwargs.get("project_type", "auto")
+            return cls.multi_file_analysis_chain(doc_type, project_type)
         elif chain_type == "codebase":
-            return cls.codebase_analysis_chain()
+            doc_type = kwargs.get("doc_type", "developer")
+            project_type = kwargs.get("project_type", "auto")
+            return cls.codebase_analysis_chain(doc_type, project_type)
         elif chain_type == "custom":
             # Custom chains require steps to be provided
             steps = kwargs.get("steps")
@@ -285,7 +289,9 @@ Create final architecture documentation:""",
             )
 
     @staticmethod
-    def multi_file_analysis_chain() -> PromptChain:
+    def multi_file_analysis_chain(
+        doc_type: str = "developer", project_type: str = "auto"
+    ) -> PromptChain:
         """
         Create a chain for multi-file analysis and documentation.
 
@@ -294,86 +300,126 @@ Create final architecture documentation:""",
         2. Identify cross-file dependencies and architecture
         3. Generate comprehensive documentation for the file group
 
+        Args:
+            doc_type: Type of documentation to generate (developer, user, both)
+            project_type: Type of project for tailored analysis
+
         Returns:
             PromptChain for multi-file analysis and documentation
         """
+        # Use new enhanced prompts based on documentation type
+        if doc_type == "developer":
+            analysis_prompt = """
+You are an expert software architect analyzing multiple related files.
+Generate comprehensive developer documentation with systems architecture focus.
+
+**Analysis Level**: Module-level + Strategic Class-level
+- Focus on module interactions and service boundaries
+- Include only strategic/architectural classes, not implementation details
+- Emphasize microservices patterns and deployment considerations
+
+**Project Type**: {project_type}
+
+**Files to Analyze**:
+{files_content}
+
+The documentation should include:
+
+1. **System Purpose & Architecture**: What problem does this solve? Key architectural decisions and overall system design
+2. **Module Interaction Analysis**: How do these modules/files interact and depend on each other? Service boundaries and data flow
+3. **Key Class Relationships**: Core abstractions, design patterns, and critical dependency relationships
+4. **Microservices Architecture Insights**: Service boundary identification, communication patterns, team ownership
+5. **Development Guide**: Extension points, key patterns to follow, architecture constraints
+
+**Guidelines**:
+- Focus on cross-file relationships and dependencies
+- Identify architectural patterns across multiple files
+- Explain how components work together as a system
+- Include specific examples of file interactions
+- Consider microservices architecture and deployment patterns
+
+Write comprehensive documentation analyzing these files together:"""
+
+        elif doc_type == "user":
+            analysis_prompt = """
+You are an expert technical writer analyzing multiple application files.
+Generate practical user documentation focusing on how to use this application.
+
+**Analysis Instructions**:
+- Focus on user-facing functionality across these files
+- Identify command-line interfaces, configuration options, and usage patterns
+- Provide practical examples of how to run and configure the application
+- Include troubleshooting and operational guidance
+
+**Files to Analyze**:
+{files_content}
+
+The documentation should include:
+
+1. **Quick Start**: Primary use cases, installation steps, first successful run example
+2. **Command Line Interface**: Available commands with examples, common usage patterns, configuration options
+3. **Configuration Guide**: Environment variables, configuration file structure, common scenarios
+4. **Operational Guide**: Monitoring, troubleshooting, performance considerations
+
+**Guidelines**:
+- Use command-line examples, not code examples
+- Focus on practical usage and configuration
+- Show how to install, configure, and operate the application
+- Include troubleshooting for common issues
+
+Write practical user documentation for this application:"""
+
+        else:  # both
+            analysis_prompt = """
+You are an expert software architect and technical writer.
+Generate comprehensive documentation for both developers and users.
+
+**Analysis Level**: Module-level + Strategic Class-level for developers
+**Project Type**: {project_type}
+
+**Files to Analyze**:
+{files_content}
+
+Generate TWO sections:
+
+## Developer Documentation
+1. **System Purpose & Architecture**: Key architectural decisions and system design
+2. **Module Interaction Analysis**: File interactions, service boundaries, data flow
+3. **Key Class Relationships**: Core abstractions and design patterns
+4. **Development Guide**: Extension points and architecture constraints
+
+## User Documentation
+1. **Quick Start**: Installation and first run
+2. **Command Line Interface**: Commands and usage examples
+3. **Configuration Guide**: Settings and configuration options
+4. **Operational Guide**: Troubleshooting and operations
+
+Write comprehensive documentation for both audiences:"""
+
         steps = [
             PromptStep(
-                name="file_group_overview",
-                prompt_template="""
-Analyze this group of related files and provide an overview:
-
-{files_summary}
-
-{files_content}
-
-Provide:
-1. Overall purpose of this file group
-2. Key relationships between files
-3. Main architectural patterns
-4. Dependencies and interfaces
-
-File Group Overview:""",
-                config=StepConfig(timeout=240.0),
-                metadata={"type": "multi_file_overview", "version": "1.0"},
-            ),
-            PromptStep(
-                name="cross_file_analysis",
-                prompt_template="""
-Based on the file group overview:
-
-{file_group_overview}
-
-Analyze the cross-file relationships in detail:
-
-{files_content}
-
-Focus on:
-1. How files interact with each other
-2. Shared data structures and interfaces
-3. Dependencies and coupling
-4. Communication patterns
-5. Potential architectural improvements
-
-Cross-file Analysis:""",
-                depends_on=["file_group_overview"],
-                config=StepConfig(timeout=300.0),
-                metadata={"type": "cross_file_analysis", "version": "1.0"},
-            ),
-            PromptStep(
-                name="comprehensive_documentation",
-                prompt_template="""
-Create comprehensive documentation for this group of {file_count} related files:
-
-Overview: {file_group_overview}
-
-Cross-file Analysis: {cross_file_analysis}
-
-Files: {files_content}
-
-Generate documentation that includes:
-1. Module/package overview
-2. Individual file descriptions
-3. Cross-file relationships and dependencies
-4. Architecture and design patterns
-5. Usage examples and integration points
-6. API documentation where applicable
-
-Comprehensive Documentation:""",
-                depends_on=["file_group_overview", "cross_file_analysis"],
+                name="multi_file_documentation",
+                prompt_template=analysis_prompt,
                 config=StepConfig(timeout=360.0),
-                metadata={"type": "multi_file_documentation", "version": "1.0"},
+                metadata={
+                    "type": "multi_file_documentation",
+                    "version": "2.0",
+                    "doc_type": doc_type,
+                    "project_type": project_type,
+                },
             ),
         ]
 
         return PromptChain(
             steps=steps,
-            name="MultiFileAnalysis",
-            fail_fast=False,  # Continue even if some steps fail
+            name=f"MultiFileAnalysis_{doc_type}",
+            fail_fast=False,
         )
 
     @staticmethod
-    def codebase_analysis_chain() -> PromptChain:
+    def codebase_analysis_chain(
+        doc_type: str = "developer", project_type: str = "auto"
+    ) -> PromptChain:
         """
         Create a chain for comprehensive codebase analysis and documentation.
 

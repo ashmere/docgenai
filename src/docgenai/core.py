@@ -905,8 +905,15 @@ def _analyze_single_group(
     # Prepare context
     context = analyzer.prepare_multi_file_context(file_group)
 
-    # Create chain
-    chain = ChainBuilder.multi_file_analysis_chain()
+    # Get documentation configuration
+    doc_config = config.get("documentation", {})
+    doc_type = doc_config.get("doc_type", "developer")
+    project_type = context.get("project_type", "auto")
+
+    # Create chain with documentation parameters
+    chain = ChainBuilder.multi_file_analysis_chain(
+        doc_type=doc_type, project_type=project_type
+    )
 
     # Execute chain
     chain_context = ChainContext()
@@ -914,6 +921,7 @@ def _analyze_single_group(
     chain_context.set_input("files_summary", context["files_summary"])
     chain_context.set_input("file_count", context["file_count"])
     chain_context.set_input("file_names", context["file_names"])
+    chain_context.set_input("project_type", project_type)
 
     # Execute steps
     for step in chain.steps:
@@ -937,7 +945,7 @@ def _analyze_single_group(
             continue
 
     # Get final documentation
-    final_docs = chain_context.get_output("comprehensive_documentation")
+    final_docs = chain_context.get_output("multi_file_documentation")
     if not final_docs:
         return {
             "output_files": [],
@@ -1012,8 +1020,15 @@ def _analyze_multiple_groups(
         ]
     )
 
+    # Get documentation configuration
+    doc_config = config.get("documentation", {})
+    doc_type = doc_config.get("doc_type", "developer")
+    project_type = doc_config.get("project_type", "auto")
+
     # Create codebase analysis chain
-    chain = ChainBuilder.codebase_analysis_chain()
+    chain = ChainBuilder.codebase_analysis_chain(
+        doc_type=doc_type, project_type=project_type
+    )
 
     # Execute chain
     chain_context = ChainContext()
@@ -1071,13 +1086,18 @@ def _analyze_multiple_groups(
             try:
                 # Generate individual group documentation
                 context = analyzer.prepare_multi_file_context(group)
-                group_chain = ChainBuilder.multi_file_analysis_chain()
+                group_chain = ChainBuilder.multi_file_analysis_chain(
+                    doc_type=doc_type, project_type=project_type
+                )
 
                 group_context = ChainContext()
                 group_context.set_input("files_content", context["files_content"])
                 group_context.set_input("files_summary", context["files_summary"])
                 group_context.set_input("file_count", context["file_count"])
                 group_context.set_input("file_names", context["file_names"])
+                group_context.set_input(
+                    "project_type", context.get("project_type", project_type)
+                )
 
                 # Execute group analysis
                 for step in group_chain.steps:

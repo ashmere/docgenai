@@ -121,6 +121,29 @@ def cli(ctx, config, verbose):
     default=8,
     help="Maximum files to analyze together in multi-file mode",
 )
+@click.option(
+    "--doc-type",
+    type=click.Choice(["developer", "user", "both"]),
+    default="both",
+    help="Type of documentation to generate",
+)
+@click.option(
+    "--project-type",
+    type=click.Choice(["microservice", "library", "application", "framework", "auto"]),
+    default="auto",
+    help="Type of project for tailored documentation",
+)
+@click.option(
+    "--detail-level",
+    type=click.Choice(["module", "class", "method", "module_plus_strategic_class"]),
+    default="module_plus_strategic_class",
+    help="Level of detail for file interaction analysis",
+)
+@click.option(
+    "--single-doc",
+    is_flag=True,
+    help="Combine both document types in one file instead of separate files",
+)
 @click.pass_context
 def generate(
     ctx,
@@ -136,6 +159,10 @@ def generate(
     chain_strategy,
     multi_file,
     max_files_per_group,
+    doc_type,
+    project_type,
+    detail_level,
+    single_doc,
 ):
     """
     Generate documentation for source code files.
@@ -182,6 +209,12 @@ def generate(
         }
     else:
         config["multi_file"] = {"enabled": False}
+
+    # Handle documentation configuration
+    config["documentation"]["doc_type"] = doc_type
+    config["documentation"]["project_type"] = project_type
+    config["documentation"]["detail_level"] = detail_level
+    config["output"]["separate_files"] = not single_doc
 
     # Determine chain strategy
     if chain_strategy:

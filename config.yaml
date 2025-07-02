@@ -81,6 +81,11 @@ output:
   dir: "output"                           # Default output directory
   filename_template: "{name}_documentation.md"  # Output filename pattern
 
+  # Multi-audience documentation
+  developer_doc_suffix: "_developer"     # Suffix for developer documentation
+  user_doc_suffix: "_user"              # Suffix for user documentation
+  separate_files: true                   # Generate separate files vs combined
+
   # Content options
   include_architecture: true             # Include architecture analysis
   include_code_stats: true              # Include code statistics
@@ -95,6 +100,30 @@ output:
   markdown_style: "github"             # Markdown flavor
   code_block_language: "auto"          # Auto-detect code language
   table_format: "github"               # Table format style
+
+# Documentation Configuration
+documentation:
+  # Multi-audience documentation
+  generate_both_types: true              # Generate both developer and user docs by default
+  doc_type: "both"                       # Options: "developer", "user", "both"
+
+  # Project type detection and templates
+  project_type: "auto"                   # auto-detect or specify: microservice|library|application|framework
+  auto_detect_project_type: true         # Automatically detect project type
+
+  # Analysis configuration
+  detail_level: "module_plus_strategic_class"  # module|class|method|module_plus_strategic_class
+  focus_on_microservices: true           # Emphasize service boundaries and contracts
+  identify_design_patterns: true         # Include design pattern analysis
+  include_extension_points: true         # Document how to extend the system
+
+  # Multi-file analysis
+  enable_multi_file: true                # Enable multi-file analysis by default
+  max_files_per_group: 8                # Maximum files per analysis group
+
+  # Future features (roadmap)
+  include_diagrams: false                # Future: Generate visual diagrams
+  custom_templates: []                   # User-defined template paths
 
 # Template Configuration
 templates:

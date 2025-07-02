@@ -378,3 +378,338 @@ docgenai interactive myfile.py
 - [ ] Extensible template system
 
 This plan represents a complete reimagining of DocGenAI with DeepSeek-V3 at its core, focusing on platform optimization, user experience, and high-quality documentation generation.
+
+## 13. Documentation Quality Improvements & Multi-Audience Strategy
+
+### Background & Problem Analysis
+
+Based on analysis of generated sample output compared to demo quality, significant improvements are needed in documentation structure and audience focus. The current approach generates generic documentation that serves neither developers nor users effectively.
+
+**Key Issues Identified:**
+- Generic descriptions instead of specific file interactions
+- No clear "purpose" sections explaining the "why"
+- Module structure documentation but not relationship-focused
+- Mixed audience targeting (neither developer nor user focused)
+- Missing architectural insights that multi-file analysis should provide
+
+**Demo Quality Reference:**
+The `test_output/multi_file_demo.md` demonstrates superior structure with:
+- ✅ **Overall Purpose** - Clear "why does this exist" explanation
+- ✅ **File Interactions** - Specific file-by-file relationship breakdown
+- ✅ **Class Relationships** - Core abstractions and how they connect
+- ✅ **Design Patterns** - Architectural patterns identified and explained
+
+### Multi-Audience Documentation Strategy
+
+#### Primary Audience: Software Engineers (Systems Architecture Focus)
+**Requirements:**
+- Deep technical understanding of system architecture
+- File interaction patterns and module dependencies
+- Class relationship diagrams and strategic abstractions
+- Design pattern identification with architectural rationale
+- Extension points and development guidance
+- Microservices architecture insights
+
+#### Secondary Audience: Application Users
+**Requirements:**
+- How to use the tool effectively
+- Command-line interface with practical examples
+- Configuration options and setup guidance
+- Troubleshooting and operational guidance
+- No code examples, but comprehensive CLI examples
+
+**Decision: Generate both document types by default** with configuration override support.
+
+### File Interaction Analysis Strategy
+
+**Chosen Approach: Module-Level + Strategic Class-Level**
+
+**Rationale for Microservices Architecture:**
+- **Service Boundaries**: Module-level shows clear service boundaries and contracts
+- **API Interfaces**: Class-level for key interface/contract classes only
+- **Deployment Mapping**: Modules often map to deployable services
+- **Team Ownership**: Modules typically align with team responsibilities
+- **Token Efficiency**: Lower usage allows analysis of larger systems
+- **Architectural Stability**: Less volatile than method-level analysis
+
+**Implementation Strategy:**
+- **Module-level** for overall architecture and service interactions
+- **Class-level** for key interfaces, contracts, and architectural components
+- **Method-level** only for critical integration points or complex algorithms
+
+### Enhanced Prompt Architecture
+
+#### Developer Documentation Prompts
+```python
+DEVELOPER_MULTI_FILE_PROMPT = """
+Analyze this codebase for software engineers with systems architecture focus:
+
+1. SYSTEM PURPOSE & ARCHITECTURE
+   - Core problem this solves and architectural approach
+   - Key architectural decisions and trade-offs
+   - Overall system design and philosophy
+
+2. MODULE INTERACTION ANALYSIS
+   - How modules/packages interact and depend on each other
+   - Service boundaries and contracts (microservices perspective)
+   - Data flow between major components
+   - Integration points and APIs
+
+3. KEY CLASS RELATIONSHIPS (Strategic Classes Only)
+   - Core abstractions and interfaces
+   - Design patterns and architectural components
+   - Critical dependency relationships
+   - Extension points and plugin architectures
+
+4. MICROSERVICES ARCHITECTURE INSIGHTS
+   - Service boundary identification
+   - Inter-service communication patterns
+   - Deployment and scaling considerations
+   - Team ownership and development patterns
+
+5. DEVELOPMENT GUIDE
+   - How to extend the system
+   - Key patterns to follow
+   - Architecture constraints and guidelines
+"""
+```
+
+#### User Documentation Prompts
+```python
+USER_DOCUMENTATION_PROMPT = """
+Create user documentation for application users:
+
+1. QUICK START
+   - Primary use cases and benefits
+   - Installation and setup steps
+   - First successful run example
+
+2. COMMAND LINE INTERFACE
+   - All available commands with examples
+   - Common usage patterns
+   - Configuration file options
+
+3. CONFIGURATION GUIDE
+   - Environment variables and settings
+   - Configuration file structure
+   - Common configuration scenarios
+
+4. OPERATIONAL GUIDE
+   - Monitoring and logging
+   - Troubleshooting common issues
+   - Performance considerations
+"""
+```
+
+### Project Type Template System
+
+**Supported Project Types:**
+```python
+PROJECT_TEMPLATES = {
+    'microservice': {
+        'focus': ['service_boundaries', 'api_contracts', 'deployment'],
+        'sections': ['Service Architecture', 'API Documentation', 'Deployment Guide']
+    },
+    'library': {
+        'focus': ['public_api', 'usage_patterns', 'integration'],
+        'sections': ['API Reference', 'Usage Examples', 'Integration Guide']
+    },
+    'application': {
+        'focus': ['user_workflows', 'configuration', 'operations'],
+        'sections': ['User Guide', 'Configuration', 'Operations Manual']
+    },
+    'framework': {
+        'focus': ['extension_points', 'patterns', 'architecture'],
+        'sections': ['Architecture Guide', 'Extension Guide', 'Best Practices']
+    }
+}
+```
+
+**Template Customization Support:**
+- User-defined template directories
+- Custom section definitions
+- Project-specific prompt modifications
+- Template validation and loading system
+
+### Configuration Enhancements
+
+#### New Configuration Parameters
+```yaml
+# config.yaml additions
+documentation:
+  generate_both_types: true  # Generate both developer and user docs by default
+  project_type: "auto"      # auto-detect or specify: microservice|library|application|framework
+  detail_level: "module_plus_strategic_class"  # module|class|method|module_plus_strategic_class
+  include_diagrams: false    # Future roadmap item
+  custom_templates: []       # User-defined template paths
+
+output:
+  developer_doc_suffix: "_developer"
+  user_doc_suffix: "_user"
+  separate_files: true       # Generate separate files vs combined
+
+analysis:
+  focus_on_microservices: true    # Emphasize service boundaries and contracts
+  identify_design_patterns: true  # Include design pattern analysis
+  include_extension_points: true  # Document how to extend the system
+```
+
+#### Enhanced CLI Options
+```bash
+# New CLI options
+--doc-type developer|user|both        # Override default both
+--project-type microservice|library|application|framework|auto
+--detail-level module|class|method|hybrid
+--template-dir path/to/custom/templates
+--single-doc                          # Combine both types in one file
+--focus-microservices                 # Emphasize microservices patterns
+```
+
+### Architecture for Future Visual Diagrams
+
+**Roadmap Item: Visual Architecture Diagrams**
+
+#### Diagram-Ready Data Structure
+```python
+class ArchitectureAnalysis:
+    def __init__(self):
+        self.modules = {}           # Module dependency graph
+        self.services = {}          # Service boundary mapping
+        self.interfaces = {}        # Key interface contracts
+        self.patterns = {}          # Design patterns identified
+        self.data_flows = []        # Data flow sequences
+
+    def to_mermaid_diagram(self):
+        """Future: Generate Mermaid diagrams"""
+        pass
+
+    def to_plantuml_diagram(self):
+        """Future: Generate PlantUML diagrams"""
+        pass
+```
+
+#### Future Diagram Generation Chain
+```python
+def architecture_diagram_chain():
+    """Roadmap: Generate visual architecture diagrams"""
+    return PromptChain([
+        PromptStep("analyze_structure", STRUCTURE_ANALYSIS_PROMPT),
+        PromptStep("generate_mermaid", MERMAID_GENERATION_PROMPT),
+        PromptStep("generate_plantuml", PLANTUML_GENERATION_PROMPT)
+    ])
+```
+
+### Expected Output Structure
+
+#### Developer Documentation Example
+```markdown
+# MyService Developer Documentation
+
+## 1. System Purpose & Architecture
+- Microservice for user authentication and authorization
+- Event-driven architecture with async messaging
+- Hexagonal architecture with clear domain boundaries
+
+## 2. Module Interaction Analysis
+- `auth/` → Core authentication logic
+- `api/` → REST API controllers (depends on auth)
+- `events/` → Event handling (depends on auth, publishes to message bus)
+- `storage/` → Data persistence (used by auth)
+
+## 3. Key Class Relationships
+- `AuthService` → Primary domain service
+- `UserRepository` → Data access interface
+- `TokenValidator` → JWT token handling
+- `EventPublisher` → Async event publishing
+
+## 4. Microservices Architecture Insights
+- Service boundary: User identity and access management
+- API contracts: REST + async events
+- Deployment: Independent Docker container
+- Team ownership: Identity team
+```
+
+#### User Documentation Example
+```markdown
+# MyService User Guide
+
+## 1. Quick Start
+```bash
+# Install and run
+docker run myservice:latest
+curl http://localhost:8080/health
+```
+
+## 2. Command Line Interface
+```bash
+# Start service
+myservice start --port 8080 --config config.yaml
+
+# Health check
+myservice health
+
+# User management
+myservice user create --email user@example.com
+```
+
+## 3. Configuration Guide
+```yaml
+# config.yaml
+server:
+  port: 8080
+  host: 0.0.0.0
+auth:
+  jwt_secret: your-secret-key
+  token_expiry: 24h
+```
+```
+
+### Implementation Phases
+
+#### Phase 1: Enhanced Prompt System (Immediate)
+- ✅ **Approved**: Module + Strategic Class analysis level
+- [ ] Update prompt templates with new structure
+- [ ] Add microservices architecture focus
+- [ ] Implement project type detection
+- [ ] Create dual-audience prompt chains
+
+#### Phase 2: Configuration & CLI (Immediate)
+- [ ] Add documentation type configuration parameters
+- [ ] Implement CLI options for document type selection
+- [ ] Add project type auto-detection logic
+- [ ] Support custom template directories
+
+#### Phase 3: Template System (Next Phase)
+- [ ] Create project type template system
+- [ ] Add user customization support
+- [ ] Template validation and loading
+- [ ] Documentation for template creation
+
+#### Phase 4: Visual Diagrams (Roadmap)
+- [ ] Implement architecture analysis data structure
+- [ ] Add Mermaid diagram generation
+- [ ] Add PlantUML diagram support
+- [ ] Interactive architecture exploration
+
+### Success Metrics
+
+#### Documentation Quality Improvements
+- **Structure**: Match demo quality with clear sections
+- **Developer Focus**: Actionable insights for software engineers
+- **User Focus**: Practical guidance for application users
+- **Architecture**: Clear microservices and system design insights
+- **Relationships**: Specific file and module interaction analysis
+
+#### Multi-Audience Success
+- **Developer Docs**: Technical depth with architectural insights
+- **User Docs**: Practical usage with CLI examples
+- **Separation**: Clear audience targeting
+- **Customization**: Flexible template and configuration system
+
+#### Technical Implementation
+- **Backward Compatibility**: Existing workflows continue to work
+- **Performance**: No significant impact on generation time
+- **Token Efficiency**: Optimized prompts for context limits
+- **Extensibility**: Easy to add new project types and templates
+
+This comprehensive enhancement plan addresses the core documentation quality issues while establishing a foundation for future visual diagram capabilities and extensive customization options.
