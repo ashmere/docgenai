@@ -5,15 +5,39 @@ High-quality prompts designed to generate excellent technical documentation
 for systems engineers and developers who need to understand codebases.
 """
 
-ARCHITECTURE_ANALYSIS_PROMPT = """
+from .base_prompts import BasePromptBuilder
+
+
+class ArchitecturePromptBuilder(BasePromptBuilder):
+    """Builder for architecture analysis prompts."""
+
+    def build_architecture_analysis_prompt(self, file_contents: str) -> str:
+        """Build the main architecture analysis prompt."""
+        return ARCHITECTURE_ANALYSIS_PROMPT.format(file_contents=file_contents)
+
+    def build_systems_engineer_prompt(self, file_contents: str) -> str:
+        """Build the systems engineer focused prompt."""
+        return SYSTEMS_ENGINEER_PROMPT.format(file_contents=file_contents)
+
+    def build_junior_developer_prompt(self, file_contents: str) -> str:
+        """Build the junior developer focused prompt."""
+        return JUNIOR_DEVELOPER_PROMPT.format(file_contents=file_contents)
+
+
+# Create a builder instance to get the formatting rules
+_builder = ArchitecturePromptBuilder()
+
+ARCHITECTURE_ANALYSIS_PROMPT = f"""
 You are analyzing a codebase to create comprehensive technical documentation
 for systems engineers and developers. Your goal is to help them understand
 the architecture, interfaces, and design patterns effectively.
 
-CODEBASE CONTENT:
-{file_contents}
+{_builder.MARKDOWN_FORMATTING_RULES}
 
-Create detailed technical documentation with these sections:
+CODEBASE CONTENT:
+{{file_contents}}
+
+Generate well-formatted markdown documentation with these sections:
 
 ## SYSTEM OVERVIEW
 - What does this application/system do? (core purpose and value)
@@ -22,7 +46,8 @@ Create detailed technical documentation with these sections:
 - Key business capabilities and use cases
 
 ## ARCHITECTURE & DESIGN
-- Overall architecture pattern (MVC, microservices, layered, event-driven, etc.)
+- Overall architecture pattern (MVC, microservices, layered,
+  event-driven, etc.)
 - Key architectural decisions and trade-offs made
 - Major components and their responsibilities
 - How components interact and communicate
@@ -80,23 +105,24 @@ For each major component, provide:
 
 ---
 
-**IMPORTANT GUIDELINES:**
+**CONTENT GUIDELINES:**
 - Be specific about file names, class names, and code structure
 - Focus on practical insights that help developers work effectively
 - Explain the "why" behind architectural decisions, not just the "what"
-- Use clear, professional language accessible to both senior and junior developers
+- Use clear, professional language accessible to both senior and
+  junior developers
 - Include concrete examples from the actual codebase
 - Highlight any unique or non-standard approaches used
 - Point out potential areas for improvement or technical debt
 """
 
-SYSTEMS_ENGINEER_PROMPT = """
+SYSTEMS_ENGINEER_PROMPT = f"""
 You are creating documentation specifically for systems engineers who need to
 understand how this codebase fits into larger infrastructure and operational
 contexts.
 
 CODEBASE CONTENT:
-{file_contents}
+{{file_contents}}
 
 Focus on these systems engineering concerns:
 
@@ -128,16 +154,18 @@ Focus on these systems engineering concerns:
 - State management and consistency guarantees
 - Error handling and circuit breaker patterns
 
+{_builder.MARKDOWN_FORMATTING_RULES}
+
 Provide specific, actionable insights that help systems engineers operate
 and integrate this component effectively.
 """
 
-JUNIOR_DEVELOPER_PROMPT = """
+JUNIOR_DEVELOPER_PROMPT = f"""
 You are creating onboarding documentation for junior developers who need to
 understand this codebase and start contributing effectively.
 
 CODEBASE CONTENT:
-{file_contents}
+{{file_contents}}
 
 Focus on these onboarding needs:
 
@@ -174,6 +202,8 @@ Focus on these onboarding needs:
 - How to ask questions and get support
 - Common mistakes to avoid
 - Resources for learning more about the technologies used
+
+{_builder.MARKDOWN_FORMATTING_RULES}
 
 Use clear, encouraging language that helps junior developers build confidence
 and understanding gradually.

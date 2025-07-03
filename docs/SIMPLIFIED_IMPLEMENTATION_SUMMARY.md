@@ -73,6 +73,7 @@ The simplified DocGenAI architecture has been successfully implemented and teste
 ## 🔧 **Configuration**
 
 ### **File Selection Configuration**
+
 ```yaml
 file_selection:
   max_files: 50
@@ -82,6 +83,7 @@ file_selection:
 ```
 
 ### **Chunking Configuration**
+
 ```yaml
 chunking:
   max_chunk_tokens: 12000
@@ -92,6 +94,7 @@ chunking:
 ```
 
 ### **Chain Configuration**
+
 ```yaml
 chains:
   default_strategy: "single_pass"
@@ -102,6 +105,7 @@ chains:
 ## 🚀 **Usage Examples**
 
 ### **CLI Usage**
+
 ```bash
 # Single file with simplified architecture
 docgenai generate --simplified src/myfile.py
@@ -114,6 +118,7 @@ docgenai generate src/myfile.py
 ```
 
 ### **Programmatic Usage**
+
 ```python
 from docgenai.simple_core import generate_documentation_simplified
 from docgenai.config import load_config

@@ -8,20 +8,37 @@ class BasePromptBuilder:
 
     # Shared formatting rules that apply to all documentation
     MARKDOWN_FORMATTING_RULES = """
-Please write the documentation in clear, professional Markdown format
-following these rules:
+**CRITICAL OUTPUT FORMAT REQUIREMENTS:**
+
+⚠️ NEVER wrap your entire response in a code block (```text or ``` markdown)
+⚠️ Write direct markdown content, not code-block-wrapped markdown
+⚠️ Start immediately with the first ## header - no preamble or code blocks
+
+**Markdown formatting rules:**
 - Use ## headers (not # headers) for main sections
+- Use ### headers for subsections
 - Surround all lists with blank lines before and after
 - Use only single blank lines between sections
-- Specify language for all code blocks (```python, ```bash, etc.)
-- Do NOT wrap your entire response in a code block
+- Specify language for code examples (```python, ```bash, etc.)
 - Do NOT use duplicate section headings
-        - Ensure that code examples are formatted correctly with proper markers
-        - Do not use ```text markers anywhere in the output
-        - Close all code blocks properly with ```
-        - Keep code examples complete and well-formatted
-        - Avoid adding text immediately after closing code blocks
-"""
+- Ensure code examples are formatted correctly with proper language markers
+- Do NOT use ```text markers anywhere in the output
+- Close all code blocks properly with ```
+- Keep code examples complete and well-formatted
+- Avoid adding text immediately after closing code blocks
+
+**Response format:**
+Write the documentation as direct markdown content. Start with:
+
+## SYSTEM OVERVIEW
+(your content here)
+
+## ARCHITECTURE & DESIGN
+(your content here)
+
+etc.
+
+DO NOT wrap the entire response in ``` markdown blocks."""
 
     # Common guidelines for all prompts
     COMMON_GUIDELINES = """

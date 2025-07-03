@@ -58,6 +58,7 @@ We successfully identified that DocGenAI had become over-engineered and implemen
 ## 🔧 **Key Components**
 
 ### **Smart File Selector**
+
 ```python
 class SmartFileSelector:
     def select_important_files(self, codebase_path: Path) -> List[Path]:
@@ -70,6 +71,7 @@ class SmartFileSelector:
 ```
 
 ### **Intelligent Chunker**
+
 ```python
 class IntelligentChunker:
     def chunk_for_llm(self, files: List[Path], max_tokens: int) -> List[Dict]:
@@ -81,6 +83,7 @@ class IntelligentChunker:
 ```
 
 ### **High-Quality Prompts**
+
 ```python
 # prompts/architecture.py
 ARCHITECTURE_ANALYSIS_PROMPT = """

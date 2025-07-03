@@ -103,6 +103,7 @@ The enhanced implementation created 4 semantically meaningful groups:
 ### Documentation Excerpt Comparison
 
 **Original Implementation:**
+
 ```
 This codebase is a backend application designed for a financial system,
 utilizing a service-oriented architecture (SOA). The primary purpose of
@@ -111,6 +112,7 @@ underlying data and business logic of the system.
 ```
 
 **Enhanced Implementation:**
+
 ```
 The codebase is designed to facilitate the management of a web-based
 application, specifically tailored for a company's internal use. It
@@ -157,19 +159,23 @@ operations, user interactions, and API communications.
 ## Error Handling Comparison
 
 ### Original Implementation
+
 ```
 ❌ Error during documentation generation: std::bad_alloc
 ```
+
 - Failed catastrophically on large codebases
 - No graceful degradation
 - Required manual intervention
 
 ### Enhanced Implementation
+
 ```
 ✅ Documentation generated successfully!
 📄 Output: ['test_output/new/codebase_documentation.md', 'test_output/new/index.md']
 ⏱️  Time: 83.41 seconds
 ```
+
 - Graceful handling of large files
 - Intelligent content extraction
 - Comprehensive error recovery
@@ -197,6 +203,7 @@ operations, user interactions, and API communications.
 3. **Performance Testing:** Test on additional large codebases to validate improvements
 
 ### Configuration Recommendations
+
 ```yaml
 documentation:
   use_enhanced_analyzer: true  # Enable enhanced analyzer

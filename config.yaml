@@ -51,6 +51,7 @@ output:
   include_architecture: true
   include_code_stats: true
   markdown_style: "github"
+  metadata_mode: "file"  # Options: "none", "footer", "file"
 
 # File Selection Configuration
 file_selection:

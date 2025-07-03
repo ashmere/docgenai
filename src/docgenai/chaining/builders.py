@@ -4,6 +4,7 @@ Pre-built chain configurations for common documentation generation patterns.
 
 from typing import Dict, List, Optional
 
+from ..prompts.base_prompts import BasePromptBuilder
 from .chain import PromptChain
 from .step import PromptStep, StepConfig
 
@@ -16,22 +17,8 @@ class ChainBuilder:
     and utilities for creating custom chains.
     """
 
-    # Shared formatting rules (same as BasePromptBuilder)
-    MARKDOWN_FORMATTING_RULES = """
-Please write the documentation in clear, professional Markdown format
-following these rules:
-- Use ## headers (not # headers) for main sections
-- Surround all lists with blank lines before and after
-- Use only single blank lines between sections
-- Specify language for all code blocks (```python, ```bash, etc.)
-- Do NOT wrap your entire response in a code block
-- Do NOT use duplicate section headings
-- Ensure that code examples are formatted correctly with proper markers
-- Do not use ```text markers anywhere in the output
-- Close all code blocks properly with ```
-- Keep code examples complete and well-formatted
-- Avoid adding text immediately after closing code blocks
-"""
+    # Reference shared formatting rules from base prompts
+    MARKDOWN_FORMATTING_RULES = BasePromptBuilder.MARKDOWN_FORMATTING_RULES
 
     @staticmethod
     def simple_documentation_chain() -> PromptChain:

@@ -96,6 +96,11 @@ def cli(ctx, config, verbose):
     is_flag=True,
     help="Clear cache before generation",
 )
+@click.option(
+    "--metadata-mode",
+    type=click.Choice(["none", "footer", "file"]),
+    help="Metadata generation mode (overrides config)",
+)
 @click.pass_context
 def generate(
     ctx,
@@ -104,6 +109,7 @@ def generate(
     offline,
     no_cache,
     cache_clear,
+    metadata_mode,
 ):
     """
     Generate documentation for a codebase or single file.
@@ -129,6 +135,11 @@ def generate(
 
     if no_cache:
         config["cache"]["enabled"] = False
+
+    if metadata_mode:
+        if "output" not in config:
+            config["output"] = {}
+        config["output"]["metadata_mode"] = metadata_mode
 
     # Log configuration
     logger.info(f"🚀 Starting documentation generation for: {target}")

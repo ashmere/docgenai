@@ -7,6 +7,90 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.0] - 2025-07-03
+
+### Added
+
+- **Configurable Metadata Generation**: Flexible metadata handling with three modes
+  - `none`: Generate clean documentation without metadata
+  - `footer`: Include metadata as footer section in documentation file (default)
+  - `file`: Save metadata as separate `.metadata.md` file alongside documentation
+  - CLI support with `--metadata-mode` option to override configuration
+  - Configuration support in `config.yaml` with `output.metadata_mode` setting
+  - Comprehensive metadata includes file analysis details, generation timestamps, model info, and platform details
+- **Enhanced Markdown Formatting System**: Consolidated formatting rules for consistent output
+  - Single source of truth for markdown formatting rules in `BasePromptBuilder`
+  - Eliminated duplicate formatting rules across different prompt modules
+  - Strengthened formatting instructions to prevent AI model wrapper issues
+  - Automatic detection and prevention of ```text code block wrapping
+  - Improved prompt engineering with prominent formatting requirements
+- **Modular Architecture Prompt System**: Refactored architecture prompts for better maintainability
+  - Created `ArchitecturePromptBuilder` class for consistent prompt generation
+  - Maintained backward compatibility with existing string template approach
+  - Centralized formatting rules reference across all prompt types
+  - Enhanced prompt clarity and AI model compliance
+
+### Changed
+
+- **Prompt Engineering**: Significantly improved AI model output quality
+  - Moved formatting rules to beginning of prompts for better AI attention
+  - Added critical warnings with visual emphasis (⚠️) to prevent common issues
+  - Strengthened instructions to prevent entire response wrapping in code blocks
+  - Enhanced formatting rule specificity and clarity
+- **Code Organization**: Better separation of concerns in prompt system
+  - Consolidated formatting rules in `BasePromptBuilder`
+  - Removed duplicate code across `ChainBuilder` and other prompt modules
+  - Improved maintainability with centralized formatting standards
+- **Default Configuration**: Updated default metadata mode to "footer" for backward compatibility
+
+### Fixed
+
+- **Critical Documentation Formatting Bug**: Resolved AI model wrapping entire output in ```text blocks
+  - Fixed architecture prompts that were generating improperly formatted documentation
+  - Eliminated ```text wrapper issues that made documentation display as code instead of rendered markdown
+  - Improved prompt instructions to ensure clean markdown output
+- **Function Reference Error**: Fixed `'function' object has no attribute 'format'` error
+  - Corrected architecture prompt backward compatibility implementation
+  - Maintained proper string template format with `{file_contents}` placeholders
+  - Ensured all prompt constants are properly formatted string templates
+- **Markdown Quality Issues**: Comprehensive formatting improvements
+  - Eliminated spurious empty code blocks in generated documentation
+  - Fixed inconsistent formatting across different prompt types
+  - Improved overall documentation readability and markdown compliance
+
+### Technical Improvements
+
+- **Comprehensive Testing**: All metadata modes thoroughly tested and validated
+  - Verified `none` mode generates clean documentation without metadata
+  - Confirmed `footer` mode appends metadata to documentation files
+  - Validated `file` mode creates separate `.metadata.md` files
+  - Tested CLI override functionality with all three modes
+- **Backward Compatibility**: All existing functionality preserved
+  - Default "footer" mode maintains existing behavior
+  - Configuration-based overrides work seamlessly
+  - CLI parameters properly override configuration settings
+- **Code Quality**: Enhanced error handling and validation
+  - Better error messages for configuration issues
+  - Improved validation of metadata mode parameters
+  - Robust fallback handling for missing configuration
+
+### Performance
+
+- **Improved Generation Speed**: Eliminated formatting post-processing overhead
+  - Better AI model compliance reduces need for output corrections
+  - Cleaner prompts result in more consistent first-pass output quality
+  - Reduced processing time through better prompt engineering
+
+### Documentation
+
+- **Comprehensive README Updates**: Added detailed metadata configuration documentation
+  - Complete usage examples for all three metadata modes
+  - Configuration examples and best practices
+  - Use case matrix for optimal mode selection
+  - Integration examples with other DocGenAI features
+
+### Previous Releases
+
 ### Added
 
 - **Comprehensive Chain Strategy Testing**: Extensive validation of all prompt chaining strategies
