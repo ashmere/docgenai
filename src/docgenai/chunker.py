@@ -24,7 +24,7 @@ class FileChunk:
     is_signature_only: bool = False
 
 
-class IntelligentChunker:
+class Chunker:
     """Chunk files intelligently for LLM consumption with token awareness."""
 
     def __init__(self, config: Dict, model=None):

@@ -14,7 +14,7 @@ from typing import Dict, List, Tuple
 logger = logging.getLogger(__name__)
 
 
-class SmartFileSelector:
+class FileSelector:
     """Select the most important files for documentation using intelligent
     heuristics."""
 

@@ -14,72 +14,72 @@ import click
 
 from . import __version__
 from .config import create_default_config_file, load_config
-from .core import DocumentationGenerator, generate_documentation
+from .core import generate_documentation
 from .models import create_model
+
+logger = logging.getLogger(__name__)
 
 
 def setup_logging(verbose: bool = False, config: dict = None):
-    """Set up logging based on configuration."""
-    log_config = config.get("logging", {}) if config else {}
+    """Set up logging configuration."""
+    # Configure logging level
+    log_level = logging.DEBUG if verbose else logging.INFO
 
-    if verbose:
-        level = getattr(logging, log_config.get("verbose_level", "DEBUG"))
-        format_str = log_config.get(
-            "verbose_format", "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-        )
-    else:
-        level = getattr(logging, log_config.get("level", "INFO"))
-        format_str = log_config.get("format", "%(message)s")
+    # Configure logging format
+    log_format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 
+    # Basic logging configuration
     logging.basicConfig(
-        level=level, format=format_str, handlers=[logging.StreamHandler(sys.stdout)]
+        level=log_level,
+        format=log_format,
+        handlers=[
+            logging.StreamHandler(),
+        ],
     )
+
+    # Configure specific loggers
+    if config and "logging" in config:
+        logging_config = config["logging"]
+
+        # Set levels for specific loggers
+        for logger_name, level in logging_config.get("loggers", {}).items():
+            logging.getLogger(logger_name).setLevel(getattr(logging, level.upper()))
 
 
 @click.group()
 @click.option(
-    "--config", "-c", type=click.Path(exists=True), help="Path to configuration file"
+    "--config",
+    "-c",
+    type=click.Path(exists=True),
+    help="Path to configuration file",
 )
 @click.option("--verbose", "-v", is_flag=True, help="Enable verbose logging")
 @click.pass_context
 def cli(ctx, config, verbose):
     """
-    DocGenAI: AI-powered code documentation generator.
+    DocGenAI - AI-powered documentation generator for codebases.
 
-    Uses DeepSeek-Coder models with platform-specific optimization:
-    - macOS: MLX-optimized model (configured in config.yaml)
-    - Linux/Windows: Transformers model with quantization (configured in config.yaml)
+    Generate comprehensive documentation for your code using local LLMs.
     """
     # Load configuration
-    try:
-        app_config = load_config(config)
-    except Exception as e:
-        click.echo(f"❌ Failed to load configuration: {e}", err=True)
-        sys.exit(1)
+    config_data = load_config(config)
 
     # Set up logging
-    setup_logging(verbose, app_config)
+    setup_logging(verbose, config_data)
 
-    # Store config in context
+    # Store in context for subcommands
     ctx.ensure_object(dict)
-    ctx.obj["config"] = app_config
-    ctx.obj["verbose"] = verbose
+    ctx.obj["config"] = config_data
+    ctx.obj["debug"] = verbose
 
 
 @cli.command()
 @click.argument("target", type=click.Path(exists=True))
 @click.option(
-    "--output-dir", "-o", default="output", help="Output directory for generated docs"
-)
-@click.option(
-    "--template",
-    type=click.Path(exists=True),
-    help="Path to template file for documentation generation",
-)
-@click.option(
-    "--style-guide",
-    type=click.Path(exists=True),
-    help="Path to style guide file for documentation generation",
+    "--output-dir",
+    "-o",
+    default="output",
+    help="Output directory for generated docs",
 )
 @click.option(
     "--offline",
@@ -87,223 +87,75 @@ def cli(ctx, config, verbose):
     help="Force offline mode (use only cached models)",
 )
 @click.option(
-    "--diagrams",
+    "--no-cache",
     is_flag=True,
-    help="Include diagrams in the generated documentation",
-)
-@click.option(
-    "--no-output-cache",
-    is_flag=True,
-    help="Disable output cache for this run",
+    help="Disable caching for this run",
 )
 @click.option(
     "--cache-clear",
     is_flag=True,
-    help="Clear all cached data",
-)
-@click.option(
-    "--chain/--no-chain",
-    default=None,
-    help="Enable/disable prompt chaining (overrides config)",
-)
-@click.option(
-    "--chain-strategy",
-    type=click.Choice(["simple", "enhanced", "architecture", "multi_file", "codebase"]),
-    help="Prompt chain strategy to use",
-)
-@click.option(
-    "--max-files-per-group",
-    type=int,
-    default=8,
-    help="Maximum files to analyze together in multi-file mode",
-)
-@click.option(
-    "--doc-type",
-    type=click.Choice(["developer", "user", "both"]),
-    default="both",
-    help="Type of documentation to generate",
-)
-@click.option(
-    "--project-type",
-    type=click.Choice(["microservice", "library", "application", "framework", "auto"]),
-    default="auto",
-    help="Type of project for tailored documentation",
-)
-@click.option(
-    "--detail-level",
-    type=click.Choice(["module", "class", "method", "module_plus_strategic_class"]),
-    default="module_plus_strategic_class",
-    help="Level of detail for file interaction analysis",
-)
-@click.option(
-    "--simplified",
-    is_flag=True,
-    help="Use simplified architecture with smart file selection and intelligent chunking",
+    help="Clear cache before generation",
 )
 @click.pass_context
 def generate(
     ctx,
     target,
     output_dir,
-    template,
-    style_guide,
     offline,
-    diagrams,
-    no_output_cache,
+    no_cache,
     cache_clear,
-    chain,
-    chain_strategy,
-    max_files_per_group,
-    doc_type,
-    project_type,
-    detail_level,
-    simplified,
 ):
     """
-    Generate documentation for source code files.
+    Generate documentation for a codebase or single file.
 
-    TARGET can be a single file or directory. Multi-file analysis
-    is automatically enabled for directories and can be forced for
-    single files with --multi-file.
+    TARGET can be either a file or directory path.
     """
-    import logging
-    import time
-    from pathlib import Path
+    config = ctx.obj["config"]
 
-    from .config import load_config
-    from .core import generate_documentation
+    # Handle cache clearing
+    if cache_clear:
+        from .cache import CacheManager
 
-    # Configure logging
-    logging.basicConfig(
-        level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
-    )
+        cache_manager = CacheManager(config["cache"])
+        cache_manager.clear_cache()
+        logger.info("🗑️  Cache cleared successfully")
+        return
 
-    logger = logging.getLogger(__name__)
-
-    # Load configuration
-    config = load_config()
-
-    # Handle offline mode
+    # Update config with command-line options
     if offline:
         config["model"]["offline_mode"] = True
         config["model"]["local_files_only"] = True
         config["model"]["check_for_updates"] = False
 
-    # Handle cache settings
-    if no_output_cache:
+    if no_cache:
         config["cache"]["enabled"] = False
-    elif cache_clear:
-        from .cache import clear_cache
 
-        clear_cache()
-
-    # Convert target to Path for analysis
-    target_path = Path(target)
-
-    # Auto-detect multi-file mode based on target type
-    is_directory = target_path.is_dir()
-    use_multi_file = is_directory
-
-    # Handle multi-file settings
-    config["multi_file"] = {
-        "enabled": use_multi_file,
-        "max_files_per_group": max_files_per_group,
-    }
-
-    # Handle documentation configuration
-    config["documentation"]["doc_type"] = doc_type
-    config["documentation"]["project_type"] = project_type
-    config["documentation"]["detail_level"] = detail_level
-
-    # Handle chaining configuration
-    if chain is not None:
-        # Explicit --chain or --no-chain flag
-        config["chaining"] = {"enabled": chain}
-    elif chain_strategy:
-        # Chain strategy specified, enable chaining
-        config["chaining"] = {"enabled": True}
-    elif use_multi_file:
-        # Multi-file mode always uses chaining
-        config["chaining"] = {"enabled": True}
-    else:
-        # Default: no chaining for single files
-        config["chaining"] = {"enabled": False}
-
-    # Determine chain strategy
-    if chain_strategy:
-        config["chain_strategy"] = chain_strategy
-    elif use_multi_file:
-        # Auto-select strategy based on input type
-        if is_directory:
-            # For directories, use codebase analysis
-            config["chain_strategy"] = "codebase"
-        else:
-            config["chain_strategy"] = "multi_file"
-    else:
-        config["chain_strategy"] = "simple"
-
-    # Validate target
-    if not target_path.exists():
-        logger.error(f"❌ Target not found: {target}")
-        ctx.exit(1)
-
-    # Directory targets always use multi-file mode
-    if is_directory and not use_multi_file:
-        logger.error("❌ Internal error: directory should auto-enable multi-file")
-        ctx.exit(1)
-
+    # Log configuration
     logger.info(f"🚀 Starting documentation generation for: {target}")
-    logger.info(f"📊 Chain strategy: {config.get('chain_strategy', 'simple')}")
-    logger.info(f"🔗 Multi-file mode: {use_multi_file}")
-    logger.info(f"🎯 Target type: {'directory' if is_directory else 'file'}")
+    logger.info(f"📁 Output directory: {output_dir}")
+    logger.info(f"💾 Cache enabled: {config['cache']['enabled']}")
+    logger.info(f"📴 Offline mode: {config['model']['offline_mode']}")
 
     start_time = time.time()
 
     try:
-        if simplified:
-            # Use simplified architecture
-            from .simple_core import generate_documentation_simplified
-
-            result = generate_documentation_simplified(
-                codebase_path=str(target_path),
-                output_dir=output_dir,
-                config=config,
-            )
-        else:
-            # Use legacy architecture
-            result = generate_documentation(
-                target_path,
-                output_dir=output_dir,
-                template_file=template,
-                style_guide_file=style_guide,
-                config=config,
-                diagrams=diagrams,
-            )
+        # Generate documentation
+        result = generate_documentation(
+            codebase_path=target,
+            output_dir=output_dir,
+            config=config,
+        )
 
         elapsed_time = time.time() - start_time
 
         if result.get("success", False):
-            logger.info(f"✅ Documentation generated successfully!")
-
-            # Handle different result formats
-            if simplified:
-                logger.info(f"📄 Output: {result.get('output_path', 'Unknown')}")
-                logger.info(f"📊 Files analyzed: {result.get('files_analyzed', 0)}")
-                logger.info(f"📦 Chunks created: {result.get('chunks_created', 0)}")
-            else:
-                logger.info(f"📄 Output: {result.get('output_files', [])}")
-
-                # Show multi-file specific stats
-                if use_multi_file and "multi_file_stats" in result:
-                    stats = result["multi_file_stats"]
-                    logger.info(f"📊 Multi-file stats:")
-                    logger.info(f"  - Groups analyzed: {stats.get('groups', 0)}")
-                    logger.info(f"  - Total files: {stats.get('total_files', 0)}")
-                    logger.info(f"  - Synthesis: {stats.get('synthesis_used', False)}")
-
+            logger.info("✅ Documentation generated successfully!")
+            logger.info(f"📄 Output: {result.get('output_path', 'Unknown')}")
+            logger.info(f"📊 Files analyzed: {result.get('files_analyzed', 0)}")
+            logger.info(f"📦 Chunks created: {result.get('chunks_created', 0)}")
             logger.info(f"⏱️  Time: {elapsed_time:.2f} seconds")
         else:
-            logger.error(f"❌ Documentation generation failed")
+            logger.error("❌ Documentation generation failed")
             logger.error(f"Error: {result.get('error', 'Unknown error')}")
             ctx.exit(1)
 
@@ -485,55 +337,48 @@ def test(ctx, file_path):
     without processing large directories.
     """
     config = ctx.obj["config"]
-    verbose = ctx.obj["verbose"]
+    debug = ctx.obj.get("debug", False)
 
     click.echo(f"🧪 Testing documentation generation on: {file_path}")
 
     try:
-        # Create model
+        # Test using the same architecture as generate command
         start_time = time.time()
-        click.echo("🤖 Initializing model...")
 
-        model = create_model(config)
+        result = generate_documentation(
+            codebase_path=file_path,
+            output_dir="test_output",
+            config=config,
+        )
 
-        init_time = time.time() - start_time
-        click.echo(f"✅ Model initialized in {init_time:.2f} seconds")
+        elapsed_time = time.time() - start_time
 
-        # Test generation
-        file_path_obj = Path(file_path)
+        if result.get("success", False):
+            click.echo("✅ Documentation generated successfully!")
+            click.echo(f"📄 Output: {result.get('output_path', 'Unknown')}")
+            click.echo(f"📊 Files analyzed: {result.get('files_analyzed', 0)}")
+            click.echo(f"📦 Chunks created: {result.get('chunks_created', 0)}")
+            click.echo(f"⏱️  Time: {elapsed_time:.2f} seconds")
 
-        click.echo("📝 Reading file...")
-        with open(file_path_obj, "r", encoding="utf-8") as f:
-            code_content = f.read()
+            # Show documentation if debug mode
+            if debug and result.get("documentation"):
+                click.echo("\n📄 Generated Documentation:")
+                click.echo("-" * 50)
+                click.echo(result["documentation"])
+                click.echo("-" * 50)
 
-        click.echo(f"📊 File size: {len(code_content)} characters")
-
-        # Generate documentation
-        click.echo("🔄 Generating documentation...")
-        gen_start = time.time()
-
-        documentation = model.generate_documentation(code_content, str(file_path_obj))
-
-        gen_time = time.time() - gen_start
-        click.echo(f"✅ Documentation generated in {gen_time:.2f} seconds")
-
-        # Show results
-        if verbose:
-            click.echo("\n📄 Generated Documentation:")
-            click.echo("-" * 50)
-            click.echo(documentation)
-            click.echo("-" * 50)
-
-        click.echo(f"📝 Documentation length: {len(documentation)} characters")
-        click.echo("🎉 Test completed successfully!")
+        else:
+            click.echo("❌ Documentation generation failed")
+            click.echo(f"Error: {result.get('error', 'Unknown error')}")
+            ctx.exit(1)
 
     except Exception as e:
         click.echo(f"❌ Test failed: {e}", err=True)
-        if verbose:
+        if debug:
             import traceback
 
             click.echo(traceback.format_exc(), err=True)
-        sys.exit(1)
+        ctx.exit(1)
 
 
 @cli.command()

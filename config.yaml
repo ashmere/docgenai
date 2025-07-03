@@ -1,137 +1,62 @@
 # DocGenAI Configuration File
-# Comprehensive configuration for code documentation generation
-#
-# OFFLINE-FRIENDLY DEFAULTS:
-# This configuration is optimized for offline work and respects HuggingFace API limits.
-# By default, the application will:
-# - Use cached models without checking for updates
-# - Only download models if they're not already cached
-# - Avoid unnecessary network calls to HuggingFace
-#
-# To enable update checking, set:
-# - model.check_for_updates: true
-# - model.offline_mode: false
-#
-# To force re-download of models, set:
-# - model.force_download: true
+# Configuration for code documentation generation
 
 # AI Model Configuration
 model:
   # Model selection (platform-aware)
   # macOS: Uses MLX-optimized model automatically
   # Linux/Windows: Uses standard transformers model
-
-  # Model names (automatically selected based on platform)
-  mlx_model: "mlx-community/DeepSeek-Coder-V2-Lite-Instruct-4bit"     # macOS (Apple Silicon) - 4-bit
-  transformers_model: "TechxGenus/DeepSeek-Coder-V2-Lite-Instruct-AWQ"   # Linux/Windows - AWQ 4-bit quantized
+  mlx_model: "mlx-community/DeepSeek-Coder-V2-Lite-Instruct-4bit"
+  transformers_model: "TechxGenus/DeepSeek-Coder-V2-Lite-Instruct-AWQ"
 
   # Generation parameters
   temperature: 0.1
-  max_tokens: 4000                 # Output tokens (context limit auto-detected from model)
+  max_tokens: 4000
   top_p: 0.9
   min_p: 0.05
   top_k: 50
-  do_sample: true          # Enable sampling vs greedy decoding
+  do_sample: true
 
   # Quantization settings (non-MLX platforms)
-  quantization: "4bit"     # Options: "none", "8bit", "4bit"
+  quantization: "4bit"
   load_in_4bit: true
   load_in_8bit: false
 
   # Model caching and offline behavior
-  session_cache: true      # Keep model in memory between generations
-  cache_model_files: true  # Cache downloaded model files
-  offline_mode: true       # Prefer cached models, avoid network calls
-  check_for_updates: false # Don't check for model updates by default (offline-friendly)
-  force_download: false    # Don't re-download cached models (set to true to force update)
-  update_check_interval_hours: 168  # How often to check for updates when enabled (1 week)
-  local_files_only: true   # HuggingFace parameter: only use local files, no downloads
+  session_cache: true
+  cache_model_files: true
+  offline_mode: true
+  check_for_updates: false
+  force_download: false
+  local_files_only: true
 
   # Hardware optimization
-  device_map: "auto"       # Automatic device mapping for multi-GPU
-  torch_dtype: "auto"      # Automatic precision selection
-  trust_remote_code: true  # Required for DeepSeek models
+  device_map: "auto"
+  torch_dtype: "auto"
+  trust_remote_code: true
 
 # Caching Configuration
 cache:
-  enabled: true                    # Enable all caching features
-  generation_cache: true           # Cache generation results
-  model_cache: true               # Cache model instances
-
-  # Cache directories
-  cache_dir: ".cache/docgenai"     # Main cache directory
-  model_cache_dir: ".cache/models" # Model files cache
-
-  # Cache limits
-  max_cache_size_mb: 2000         # Maximum total cache size
-  max_generation_cache_mb: 500    # Max size for generation cache
-  max_model_cache_mb: 1500        # Max size for model cache
-
-  # Cache TTL (time-to-live)
-  generation_ttl_hours: 24        # How long to keep generation cache
-  model_ttl_hours: 168           # How long to keep model cache (1 week)
-
-  # Cache cleanup
-  auto_cleanup: true              # Automatically clean old cache
-  cleanup_on_startup: false      # Clean cache on application start
+  enabled: true
+  cache_dir: ".cache/docgenai"
+  model_cache_dir: ".cache/models"
+  max_cache_size_mb: 2000
+  generation_ttl_hours: 24
+  auto_cleanup: true
 
 # Output Configuration
 output:
-  # Output directory and file naming
-  dir: "output"                           # Default output directory
-  filename_template: "{name}_documentation.md"  # Output filename pattern
+  dir: "output"
+  filename_template: "{name}_documentation.md"
+  include_architecture: true
+  include_code_stats: true
+  markdown_style: "github"
 
-  # Multi-audience documentation
-  developer_doc_suffix: "_developer"     # Suffix for developer documentation
-  user_doc_suffix: "_user"              # Suffix for user documentation
-  separate_files: true                   # Generate separate files vs combined
-
-  # Content options
-  include_architecture: true             # Include architecture analysis
-  include_code_stats: true              # Include code statistics
-  include_dependencies: true            # Include dependency analysis
-  include_examples: true                # Include usage examples
-
-  # File organization
-  create_subdirs: true                  # Create subdirectories for organization
-  preserve_structure: true             # Preserve source directory structure
-
-  # Format options
-  markdown_style: "github"             # Markdown flavor
-  code_block_language: "auto"          # Auto-detect code language
-  table_format: "github"               # Table format style
-
-# Documentation Configuration
-documentation:
-  # Multi-audience documentation
-  generate_both_types: true              # Generate both developer and user docs by default
-  doc_type: "both"                       # Options: "developer", "user", "both"
-
-  # Project type detection and templates
-  project_type: "auto"                   # auto-detect or specify: microservice|library|application|framework
-  auto_detect_project_type: true         # Automatically detect project type
-
-  # Analysis configuration
-  detail_level: "module_plus_strategic_class"  # module|class|method|module_plus_strategic_class
-  focus_on_microservices: true           # Emphasize service boundaries and contracts
-  identify_design_patterns: true         # Include design pattern analysis
-  include_extension_points: true         # Document how to extend the system
-
-  # Multi-file analysis
-  enable_multi_file: true                # Enable multi-file analysis by default
-  use_enhanced_analyzer: false           # Use enhanced analyzer with semantic grouping
-  use_simplified_generator: true         # Use new simplified architecture
-  max_files_per_group: 8                # Maximum files per analysis group
-
-  # Future features (roadmap)
-  include_diagrams: false                # Future: Generate visual diagrams
-  custom_templates: []                   # User-defined template paths
-
-# Simplified Architecture Configuration
+# File Selection Configuration
 file_selection:
-  max_files: 50                          # Maximum files to select for analysis
-  max_file_size: 10000                   # Maximum file size in characters
-  include_patterns:                      # File patterns to include
+  max_files: 50
+  max_file_size: 10000
+  include_patterns:
     - "*.py"
     - "*.js"
     - "*.ts"
@@ -145,7 +70,7 @@ file_selection:
     - "*.rs"
     - "*.rb"
     - "*.php"
-  exclude_patterns:                      # Patterns to exclude
+  exclude_patterns:
     - "*/node_modules/*"
     - "*/__pycache__/*"
     - "*/vendor/*"
@@ -156,193 +81,50 @@ file_selection:
     - "*/venv/*"
     - "*/env/*"
 
+# Chunking Configuration
 chunking:
-  max_chunk_tokens: 12000                # Maximum tokens per chunk (75% of context)
-  overlap_tokens: 500                    # Token overlap between chunks
-  prefer_file_boundaries: true           # Prefer to keep files together
-  signature_threshold: 5000              # File size threshold for signature extraction
-  safety_margin: 0.75                    # Safety margin for token limits
+  max_chunk_tokens: 12000
+  overlap_tokens: 500
+  prefer_file_boundaries: true
+  signature_threshold: 5000
+  safety_margin: 0.75
 
+# Chain Configuration
 chains:
-  default_strategy: "single_pass"        # Default chaining strategy
-  enable_refinement: false               # Enable documentation refinement chain
-  enable_synthesis: true                 # Enable multi-chunk synthesis
+  default_strategy: "single_pass"
+  enable_refinement: false
+  enable_synthesis: true
 
 # Template Configuration
 templates:
-  # Template directories and files
-  dir: "src/docgenai/templates"              # Template directory
-  doc_template: "default_doc_template.md"    # Main documentation template
-  style_guide: "default_style_guide.md"     # Style guide template
-  summary_template: "directory_summary.md"   # Directory summary template
-
-  # Template customization
-  custom_templates_dir: "templates"         # User custom templates
-  allow_custom_templates: true              # Enable custom templates
-
-  # Template variables
-  author: ""                               # Default author name
-  organization: ""                         # Default organization
-  project_name: ""                        # Default project name
-  project_version: ""                     # Your project version (optional)
+  dir: "src/docgenai/templates"
+  doc_template: "default_doc_template.md"
+  style_guide: "default_style_guide.md"
+  author: ""
+  organization: ""
+  project_name: ""
+  project_version: ""
 
 # Generation Configuration
 generation:
-  # File processing
-  file_patterns:
-    - "*.py"      # Python
-    - "*.js"      # JavaScript
-    - "*.ts"      # TypeScript
-    - "*.jsx"     # React JSX
-    - "*.tsx"     # React TypeScript
-    - "*.cpp"     # C++
-    - "*.cc"      # C++
-    - "*.cxx"     # C++
-    - "*.c"       # C
-    - "*.h"       # C/C++ headers
-    - "*.hpp"     # C++ headers
-    - "*.java"    # Java
-    - "*.go"      # Go
-    - "*.rs"      # Rust
-    - "*.rb"      # Ruby
-    - "*.php"     # PHP
-    - "*.cs"      # C#
-    - "*.swift"   # Swift
-    - "*.kt"      # Kotlin
-    - "*.scala"   # Scala
-    - "*.r"       # R
-    - "*.R"       # R
-
-  # Processing options
-  max_file_size_mb: 10                # Maximum file size to process
-  skip_binary_files: true             # Skip binary files
-  skip_generated_files: true          # Skip generated files
-  skip_test_files: false              # Process test files
-
-  # Parallel processing
-  max_workers: 4                      # Maximum parallel workers
-  batch_size: 5                       # Files per batch
-
-  # Content analysis
-  analyze_imports: true               # Analyze import statements
-  analyze_functions: true             # Analyze function definitions
-  analyze_classes: true               # Analyze class definitions
-  analyze_complexity: true            # Analyze code complexity
-
-  # Documentation depth
-  detail_level: "medium"              # Options: "brief", "medium", "detailed"
-  include_private_methods: false      # Document private methods
-  include_internal_classes: false    # Document internal classes
+  doc_type: "both"
+  project_type: "auto"
+  detail_level: "module_plus_strategic_class"
+  max_files_per_group: 8
+  use_chaining: false
+  chain_strategy: "simple"
 
 # Logging Configuration
 logging:
-  # Log levels: DEBUG, INFO, WARNING, ERROR, CRITICAL
-  level: "INFO"                       # Default log level
-  verbose_level: "DEBUG"              # Log level when --verbose is used
-
-  # Log formatting
-  format: "%(message)s"               # Simple format with emojis
+  level: "INFO"
+  verbose_level: "DEBUG"
+  format: "%(message)s"
   verbose_format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-
-  # Log output
-  console: true                       # Log to console
-  file: false                         # Log to file
-  log_file: "logs/docgenai.log"      # Log file path
-
-  # Log rotation
-  max_log_size_mb: 10                # Maximum log file size
-  backup_count: 3                    # Number of backup log files
-
-# Environment Variables
-# These can be set as environment variables with DOCGENAI_ prefix
-# Example: DOCGENAI_MODEL__TEMPERATURE=0.8
-# Example: DOCGENAI_CACHE__ENABLED=false
-# Example: DOCGENAI_OUTPUT__DIR=/custom/output
-
-# Security Configuration
-security:
-  # Model security
-  allow_remote_code: true            # Allow remote code execution in models
-  verify_ssl: true                   # Verify SSL certificates
-
-  # File security
-  restrict_file_access: false        # Restrict file access to specific directories
-  allowed_directories: []            # List of allowed directories (if restricted)
-
-  # Network security
-  proxy_url: ""                      # HTTP proxy URL
-  timeout_seconds: 300               # Network timeout
+  console: true
+  file: false
 
 # Performance Configuration
 performance:
-  # Memory management
-  max_memory_usage_gb: 16           # Maximum memory usage
-  memory_cleanup_threshold: 0.8     # Memory cleanup threshold
-
-  # Processing limits
-  max_concurrent_files: 10          # Maximum files processed concurrently
-  processing_timeout_minutes: 30    # Timeout for single file processing
-
-  # Model optimization
-  use_cpu_offload: false            # Offload model to CPU when not in use
-  use_disk_offload: false           # Offload model to disk when not in use
-  optimize_for_speed: true          # Optimize for speed vs quality
-
-  # Hardware detection
-  auto_detect_gpu: true             # Automatically detect and use GPU
-  prefer_gpu: true                  # Prefer GPU over CPU when available
-
-# Integration Configuration
-integrations:
-  # Git integration
-  git:
-    enabled: true                   # Enable git integration
-    include_commit_info: true       # Include commit information
-    include_branch_info: true       # Include branch information
-    include_author_info: false      # Include author information
-
-  # IDE integration
-  vscode:
-    enabled: false                  # Enable VS Code integration
-    config_path: ".vscode/settings.json"
-
-  # CI/CD integration
-  github_actions:
-    enabled: false                  # Enable GitHub Actions integration
-    workflow_path: ".github/workflows/docs.yml"
-
-  # Documentation platforms
-  gitbook:
-    enabled: false                  # Enable GitBook integration
-    api_key: ""                     # GitBook API key (use env var)
-
-  confluence:
-    enabled: false                  # Enable Confluence integration
-    base_url: ""                    # Confluence base URL
-    api_key: ""                     # Confluence API key (use env var)
-
-# Prompt Chaining Configuration
-chaining:
-  # Multi-step AI generation settings
-  enabled: false                    # Disabled by default for backward compatibility
-  default_strategy: "simple"        # Options: "simple", "enhanced", "architecture"
-  max_steps: 10                     # Maximum steps in a chain
-  timeout_per_step: 300             # Timeout per step in seconds
-  fail_fast: true                   # Stop execution on first step failure
-  parallel_execution: false         # Future feature for parallel step execution
-  retry_failed_steps: false         # Retry failed steps automatically
-  log_step_outputs: false           # Log individual step outputs for debugging
-
-# Experimental Features
-experimental:
-  # Future features (not yet implemented)
-  interactive_mode: false           # Interactive documentation tuning
-  ai_suggestions: false             # AI-powered improvement suggestions
-  code_refactoring_hints: false     # Suggest code improvements
-  documentation_scoring: false      # Score documentation quality
-  auto_update_docs: false          # Automatically update outdated docs
-
-  # Advanced AI features
-  multi_model_consensus: false      # Use multiple models for consensus
-  custom_prompt_engineering: false  # Allow custom prompt templates
-  domain_specific_training: false   # Domain-specific model fine-tuning
+  max_memory_usage_gb: 16
+  auto_detect_gpu: true
+  prefer_gpu: true
