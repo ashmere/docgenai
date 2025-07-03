@@ -1,34 +1,50 @@
-# Implementation Plan: AI Code Documentor (DocGenAI) - DeepSeek-V3 Edition
+# Implementation Plan: DocGenAI - Simplified High-Quality Edition
+
+## 🚨 BREAKING CHANGE: Simplified Architecture (2025-07-03)
+
+**Previous Approach**: Complex semantic analysis with language extractors, pattern detection, and multiple analyzer types.
+
+**New Approach**: LLM-first documentation generation with smart file selection and intelligent chunking.
+
+**Rationale**: The LLM is already excellent at understanding code. Our job is to select the right files, chunk them efficiently, and ask the right questions.
 
 ## 1. Project Overview
 
-This document outlines the implementation plan for DocGenAI, a Python-based CLI tool designed to automate the generation and improvement of technical documentation. The tool uses DeepSeek-V3 with platform-specific optimizations to analyze code and generate comprehensive documentation with architectural insights.
+DocGenAI is a Python-based CLI tool designed to generate high-quality technical documentation for any codebase. The tool uses DeepSeek-V3 with platform-specific optimizations and focuses on practical documentation that serves both systems engineers and junior developers.
 
-**Key Innovation**: Platform-aware model selection for optimal performance:
+**Core Philosophy**: Let the LLM understand the code. Focus on smart file selection and excellent prompts.
 
-- **macOS**: MLX-optimized DeepSeek-V3 8-bit model for native Apple Silicon performance
-- **Linux/Windows**: Standard DeepSeek-V3 with CUDA support and quantization options
+**Target Audience**:
+1. **Systems Engineers**: Need to understand architecture, interfaces, and data flow quickly
+2. **Junior Developers**: Need onboarding information to add features effectively
 
 ## 2. Core Features
 
-- **Intelligent Code Analysis**: Parse and understand single files or entire directory structures
-- **Comprehensive Documentation**: Generate detailed explanations, usage examples, and architectural insights
-- **Platform Optimization**: Automatic detection and optimization for different operating systems
-- **Multi-Language Support**: Python, TypeScript, C++, JavaScript, Java, Go, Rust, and more
-- **Template-Driven Output**: Customizable documentation templates with consistent formatting
-- **Caching System**: Intelligent caching to avoid regenerating unchanged documentation
-- **Interactive Testing**: Built-in test command for quick model validation
+- **Smart File Selection**: Intelligent heuristics to identify the most important files
+- **Intelligent Chunking**: Token-aware chunking that respects LLM context limits
+- **High-Quality Prompts**: Purpose-specific prompts organized in `prompts/` directory
+- **Chain Processing**: Configurable prompt chains for documentation refinement
+- **Platform Optimization**: Automatic model selection (MLX on macOS, Transformers elsewhere)
+- **Universal Language Support**: Works with any programming language
+- **Template-Driven Output**: Customizable documentation templates
+- **Simple Caching**: Efficient caching to avoid regeneration
 
-## 3. Technical Stack
+## 3. Simplified Architecture
 
-- **Language**: Python 3.12+
-- **CLI Framework**: `click` (rich command-line interface with helpful error messages)
-- **AI Models**:
-  - macOS: `mlx-community/DeepSeek-v3-0324-8bit` via `mlx-lm`
-  - Other platforms: `deepseek-ai/DeepSeek-V3` via `transformers`
-- **Templating**: `Jinja2` for customizable output formatting
-- **Configuration**: YAML-based configuration with sensible defaults
-- **Caching**: File-based caching with automatic invalidation
+```
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│  Smart File     │    │  Intelligent    │    │  Documentation  │
+│  Selector       │───▶│  Chunker        │───▶│  Generator      │
+│                 │    │                 │    │                 │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
+         │                       │                       │
+         ▼                       ▼                       ▼
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│  File           │    │  Token-Aware    │    │  Prompt Chain   │
+│  Heuristics     │    │  Chunking       │    │  Processing     │
+│                 │    │                 │    │                 │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
+```
 
 ## 4. Project Structure
 
@@ -36,710 +52,395 @@ This document outlines the implementation plan for DocGenAI, a Python-based CLI 
 docgenai/
 ├── src/docgenai/
 │   ├── __init__.py
-│   ├── cli.py              # Click CLI with platform detection
-│   ├── models.py           # DeepSeek-V3 with MLX/Transformers backends
-│   ├── core.py             # Documentation generation engine
-│   ├── config.py           # Configuration management
-│   ├── cache.py            # Generation caching system
-│   ├── templates.py        # Template loading and rendering
+│   ├── cli.py                    # Click CLI interface
+│   ├── models.py                 # DeepSeek-V3 with platform detection
+│   ├── core.py                   # Simplified documentation generator
+│   ├── file_selector.py          # Smart file selection heuristics
+│   ├── chunker.py                # Intelligent token-aware chunking
+│   ├── config.py                 # Configuration management
+│   ├── cache.py                  # Simple generation caching
+│   ├── templates.py              # Template loading and rendering
+│   ├── chaining/                 # Prompt chain system (RETAINED)
+│   │   ├── __init__.py
+│   │   ├── chain.py
+│   │   ├── context.py
+│   │   └── step.py
+│   ├── prompts/                  # Purpose-specific prompts (NEW)
+│   │   ├── __init__.py
+│   │   ├── architecture.py       # Architecture analysis prompts
+│   │   ├── synthesis.py          # Multi-chunk synthesis prompts
+│   │   ├── refinement.py         # Documentation refinement prompts
+│   │   └── base.py               # Base prompt templates
 │   └── templates/
 │       ├── default_doc_template.md
 │       └── directory_summary_template.md
 ├── docs/
-│   ├── developer.md        # Updated for DeepSeek-V3 architecture
-│   └── plan.md            # This file
-├── docker/                 # Docker support for non-macOS platforms
-│   ├── Dockerfile
-│   ├── run.sh
-│   └── README.md
-├── tests/                  # Comprehensive test suite
-├── output/                 # Generated documentation output
-├── config.yaml             # Default configuration
-├── pyproject.toml          # Dependencies with platform markers
-└── README.md               # Updated usage guide
+│   ├── developer.md              # Development guide
+│   ├── plan.md                   # This file
+│   └── architecture.md           # System architecture (MAINTAINED)
+├── tests/                        # Test suite
+├── config.yaml                   # Configuration
+└── README.md                     # User guide
 ```
 
-## 5. Implementation Milestones
+## 5. Implementation Plan
 
-### Milestone 1: Platform Detection and Model Infrastructure ✅ COMPLETED
+### Phase 1: Core Simplification (Week 1) ⚡ PRIORITY
 
-- ✅ Platform detection system (macOS vs Linux/Windows)
-- ✅ DeepSeek-V3 model abstraction with dual backends
-- ✅ MLX integration for macOS with `mlx-lm` dependency
-- ✅ Transformers integration for other platforms
-- ✅ Model factory pattern for seamless switching
-- ✅ Comprehensive error handling and logging
+**Goal**: Replace complex analysis with simple, effective components
 
-### Milestone 2: Enhanced CLI and User Experience ✅ COMPLETED
+**Tasks**:
+- [ ] Implement `SmartFileSelector` with heuristics-based selection
+- [ ] Create `IntelligentChunker` for token-aware chunking
+- [ ] Simplify `DocumentationGenerator` to use new components
+- [ ] Organize prompts into purpose-specific files in `prompts/` directory
+- [ ] Maintain prompt chain system for refinement workflows
 
-- ✅ Intuitive CLI with `click` framework
-- ✅ Multiple commands: `generate`, `info`, `cache`, `test`
-- ✅ Platform-specific startup information
-- ✅ Verbose logging with emoji indicators
-- ✅ Progress tracking and performance metrics
-- ✅ Helpful error messages and troubleshooting hints
+### Phase 2: Prompt Excellence (Week 1-2) ⚡ PRIORITY
 
-### Milestone 3: Core Documentation Engine ✅ COMPLETED
+**Goal**: Create high-quality prompts that produce excellent documentation
 
-- ✅ File and directory processing workflows
-- ✅ Multi-language code detection and handling
-- ✅ Documentation and architecture analysis generation
-- ✅ Template rendering system with context variables
-- ✅ Output file management and organization
-- ✅ Cache integration for performance optimization
+**Tasks**:
+- [ ] Design architecture analysis prompt for systems engineers
+- [ ] Create developer onboarding prompt for junior developers
+- [ ] Implement multi-chunk synthesis for large codebases
+- [ ] Build documentation refinement chains
+- [ ] Test and iterate on prompt quality
 
-### Milestone 4: Advanced Features and Polish
+### Phase 3: Testing & Validation (Week 2-3)
 
-✅ **COMPLETED** - Enhanced multi-audience documentation system implemented
+**Goal**: Ensure system works reliably across different codebase types and sizes
 
-**Completion Date**: 2025-07-02
-**Commit**: 9aaeda4 - feat: implement enhanced multi-audience documentation system
+**Tasks**:
+- [ ] Test on small codebases (10-50 files)
+- [ ] Test on medium codebases (100-500 files)
+- [ ] Test on large codebases (1000+ files)
+- [ ] Validate against success criteria
+- [ ] Performance optimization
 
-**Remaining Tasks**:
+## 6. Smart File Selection Strategy
 
-- [ ] Interactive prompt system for documentation tuning
-- [ ] Advanced template customization options
-- [ ] Configuration file generation and management
-- [ ] Enhanced directory summary with dependency graphs
-- [ ] Performance benchmarking and optimization
-- [ ] Comprehensive test coverage
-
-**Implementation Focus**:
+### Heuristics-Based Selection
 
 ```python
-# Interactive prompt system
-@cli.command()
-def interactive(ctx):
-    """Interactive documentation tuning session."""
-    # Allow users to iteratively improve generated docs
-    # Real-time preview and editing capabilities
-    # Save custom templates and preferences
+class SmartFileSelector:
+    def select_important_files(self, codebase_path: Path) -> List[Path]:
+        """Select files using intelligent heuristics."""
+
+        important_files = []
+
+        # 1. Entry points (main.py, index.js, app.py, etc.)
+        important_files.extend(self._find_entry_points(codebase_path))
+
+        # 2. Configuration files (package.json, requirements.txt, etc.)
+        important_files.extend(self._find_config_files(codebase_path))
+
+        # 3. API/Interface files (routes, controllers, services)
+        important_files.extend(self._find_api_files(codebase_path))
+
+        # 4. Core business logic (largest/most connected files)
+        important_files.extend(self._find_core_files(codebase_path))
+
+        # 5. Documentation files (README, docs)
+        important_files.extend(self._find_documentation_files(codebase_path))
+
+        return self._prioritize_and_limit(important_files, max_files=50)
 ```
 
-### Milestone 5: Testing and Validation
+### File Priority Patterns
 
-**Status**: 📋 PLANNED
+```python
+ENTRY_POINT_PATTERNS = [
+    "main.py", "app.py", "server.py", "__main__.py",
+    "index.js", "server.js", "app.js", "main.js",
+    "main.go", "cmd/*/main.go", "src/main/*"
+]
 
-**Tasks**:
+API_PATTERNS = [
+    "**/routes/**", "**/controllers/**", "**/handlers/**",
+    "**/api/**", "**/endpoints/**", "**/services/**"
+]
 
-- [ ] Unit tests for all core components
-- [ ] Integration tests with real codebases
-- [ ] Platform-specific testing (macOS MLX vs Transformers)
-- [ ] Performance benchmarking across platforms
-- [ ] Documentation quality validation
-- [ ] Edge case handling (large files, binary files, etc.)
+CONFIG_PATTERNS = [
+    "package.json", "requirements.txt", "go.mod", "Cargo.toml",
+    "pom.xml", "build.gradle", "*.config.*", "docker-compose.*"
+]
+```
 
-### Milestone 6: Documentation and Distribution
+## 7. Intelligent Chunking Strategy
 
-**Status**: 📋 PLANNED
+### Token-Aware Chunking
 
-**Tasks**:
+```python
+class IntelligentChunker:
+    def chunk_for_llm(self, files: List[Path], max_tokens: int) -> List[Dict]:
+        """Chunk files intelligently for LLM consumption."""
 
-- [ ] Comprehensive user documentation
-- [ ] API documentation for extensibility
-- [ ] Platform-specific installation guides
-- [ ] Performance tuning recommendations
-- [ ] Troubleshooting guides
-- [ ] PyPI package preparation and distribution
+        chunks = []
+        current_chunk = []
+        current_tokens = 0
+        safety_margin = 0.8  # Use 80% of context
 
-### Milestone 7: Advanced Integrations
+        for file_path in files:
+            file_content = self._read_file_smart(file_path)
+            file_tokens = self._estimate_tokens(file_content)
 
-**Status**: 🔮 FUTURE
+            if current_tokens + file_tokens > max_tokens * safety_margin:
+                if current_chunk:
+                    chunks.append(self._create_chunk(current_chunk))
+                    current_chunk = [file_path]
+                    current_tokens = file_tokens
+                else:
+                    # Single file too large, extract signatures only
+                    chunks.extend(self._split_large_file(file_path, max_tokens))
+            else:
+                current_chunk.append(file_path)
+                current_tokens += file_tokens
 
-**Potential Features**:
+        if current_chunk:
+            chunks.append(self._create_chunk(current_chunk))
 
-- [ ] IDE plugins (VS Code, PyCharm)
-- [ ] Git hooks for automatic documentation updates
-- [ ] CI/CD integration for documentation validation
-- [ ] Web interface for team collaboration
-- [ ] Custom model fine-tuning capabilities
-- [ ] Multi-repository documentation aggregation
+        return chunks
+```
 
-## 6. Platform-Specific Optimizations
+### Smart File Reading
 
-### macOS (Apple Silicon)
+```python
+def _read_file_smart(self, file_path: Path) -> str:
+    """Read file, extracting signatures if too large."""
+    content = file_path.read_text(encoding='utf-8', errors='ignore')
 
-**Advantages**:
+    if len(content) > 5000:  # Threshold for signature extraction
+        return self._extract_signatures(content, file_path.suffix)
 
-- ✅ Native MLX optimization for M1/M2/M3 chips
-- ✅ 8-bit quantization for memory efficiency
-- ✅ Fast model loading (typically 30-60 seconds)
-- ✅ No Docker dependency required
-- ✅ Native Python environment support
+    return content
 
-**Model**: `mlx-community/DeepSeek-v3-0324-8bit`
-**Backend**: `mlx-lm`
-**Memory Usage**: ~4-6GB RAM
-**Performance**: Optimized for Apple Silicon architecture
+def _extract_signatures(self, content: str, extension: str) -> str:
+    """Extract function/class signatures, imports, and structure."""
+    lines = content.split('\n')
+    important_lines = []
 
-### Linux/Windows
+    for line in lines:
+        stripped = line.strip()
+        # Keep structural elements across languages
+        if (stripped.startswith(('import ', 'from ', 'class ', 'def ', 'function ',
+                               'interface ', 'type ', 'const ', 'let ', 'var ',
+                               'public ', 'private ', 'protected ', '//', '#')) or
+            len(stripped) == 0 or  # Empty lines for structure
+            '{' in stripped or '}' in stripped):  # Braces for structure
+            important_lines.append(line)
 
-**Advantages**:
+    return '\n'.join(important_lines)
+```
 
-- ✅ Full precision model access
-- ✅ CUDA GPU acceleration support
-- ✅ Flexible quantization options
-- ✅ Docker containerization available
-- ✅ Scalable for server deployments
+## 8. High-Quality Prompt System
 
-**Model**: `deepseek-ai/DeepSeek-V3`
-**Backend**: `transformers` + `torch`
-**Memory Usage**: 8-16GB RAM (depending on quantization)
-**Performance**: CUDA acceleration when available
+### Architecture Analysis Prompt
 
-## 7. Configuration System
+```python
+# prompts/architecture.py
+ARCHITECTURE_ANALYSIS_PROMPT = """
+You are analyzing a codebase to create documentation for systems engineers and developers.
 
-### Default Configuration
+CODEBASE FILES:
+{file_contents}
+
+Create comprehensive documentation with these sections:
+
+## SYSTEM OVERVIEW
+- What does this application/system do?
+- What problem does it solve?
+- What type of system is it? (web app, API, CLI tool, library, etc.)
+
+## ARCHITECTURE & DESIGN
+- Overall architecture pattern (MVC, microservices, layered, etc.)
+- Key architectural decisions and trade-offs
+- Main components and their responsibilities
+
+## MAJOR INTERFACES & APIs
+- External APIs (REST endpoints, GraphQL, etc.)
+- Internal interfaces between components
+- Data contracts and schemas
+- Integration points with other systems
+
+## DATA FLOW
+- How data moves through the system
+- Key data transformations
+- Database/storage patterns
+- Event flows (if applicable)
+
+## KEY FILES & COMPONENTS
+For each major component:
+- Purpose and responsibility
+- Key classes/functions
+- Dependencies and relationships
+- Configuration and entry points
+
+## DEVELOPER ONBOARDING
+- Setup and running instructions
+- Key patterns and conventions
+- Where to start when adding features
+- Common development workflows
+
+Focus on practical insights. Be specific about file names, class names, and code structure.
+"""
+```
+
+### Refinement Chain
+
+```python
+# prompts/refinement.py
+DOCUMENTATION_REFINEMENT_CHAIN = PromptChain([
+    PromptStep(
+        name="initial_analysis",
+        prompt=ARCHITECTURE_ANALYSIS_PROMPT,
+        output_key="base_documentation"
+    ),
+    PromptStep(
+        name="enhance_interfaces",
+        prompt="""
+        Enhance the MAJOR INTERFACES & APIs section:
+
+        {base_documentation}
+
+        Add specific details about:
+        - API endpoint specifications
+        - Request/response formats
+        - Authentication/authorization
+        - Error handling patterns
+        """,
+        output_key="enhanced_interfaces"
+    ),
+    PromptStep(
+        name="add_dataflow",
+        prompt="""
+        Enhance the DATA FLOW section:
+
+        {enhanced_interfaces}
+
+        Add detailed information about:
+        - Step-by-step data processing flows
+        - Database interaction patterns
+        - Caching strategies
+        - Error handling and rollback procedures
+        """,
+        output_key="enhanced_dataflow"
+    ),
+    PromptStep(
+        name="final_polish",
+        prompt="""
+        Polish and finalize the documentation:
+
+        {enhanced_dataflow}
+
+        Final improvements:
+        - Ensure consistency in terminology
+        - Add practical examples where helpful
+        - Verify completeness
+        - Optimize for readability
+        """,
+        output_key="final_documentation"
+    )
+])
+```
+
+## 9. Success Criteria
+
+### For Systems Engineers
+- [ ] Clear architecture overview in 2-3 paragraphs
+- [ ] Major components and relationships identified
+- [ ] API interfaces and data contracts documented
+- [ ] Data flow through system explained
+- [ ] Key design decisions and patterns explained
+
+### For Junior Developers
+- [ ] Setup and running instructions
+- [ ] Key files and starting points identified
+- [ ] Common patterns and conventions explained
+- [ ] Guidance on where to add new features
+- [ ] Development workflow documented
+
+### Technical Requirements
+- [ ] Works on codebases from 10 files to 1000+ files
+- [ ] Generates documentation in under 5 minutes
+- [ ] Uses available context efficiently
+- [ ] Produces consistent, high-quality output
+- [ ] Maintains prompt chain capability for refinement
+
+## 10. Removed Complexity (Breaking Changes)
+
+### ❌ Eliminated Components
+- **Semantic Grouping**: Complex file organization algorithms
+- **Language Extractors**: Regex-based content extraction
+- **Pattern Detection**: Project type detection systems
+- **Multiple Analyzers**: Enhanced vs legacy analyzer confusion
+- **Over-Engineering**: Complex configuration systems
+
+### ✅ Retained Components
+- **Prompt Chains**: For documentation refinement workflows
+- **Purpose-Specific Prompts**: Organized in `prompts/` directory
+- **Model Abstraction**: Platform-aware model selection
+- **Template System**: Customizable output formatting
+- **Simple Caching**: Efficient caching system
+- **CLI Interface**: User-friendly command-line interface
+
+## 11. Configuration (Simplified)
 
 ```yaml
 # config.yaml
 model:
-  # Platform detection is automatic
-  temperature: 0.7
-  max_tokens: 2048
-  top_p: 0.8
+  temperature: 0.1
+  max_tokens: 4000
+  context_limit: 16384  # Auto-detected
+
+file_selection:
+  max_files: 50
+  max_file_size: 10000  # chars
+  include_patterns: ["*.py", "*.js", "*.ts", "*.go", "*.java"]
+  exclude_patterns: ["*/node_modules/*", "*/__pycache__/*"]
+
+chunking:
+  max_chunk_tokens: 12000  # 75% of context limit
+  overlap_tokens: 500
+  prefer_file_boundaries: true
+
+chains:
+  default_strategy: "single_pass"  # or "refinement_chain"
+  enable_synthesis: true
+
+output:
+  template: "default"
+  include_file_tree: true
+  include_setup_instructions: true
 
 cache:
   enabled: true
   directory: ".docgenai_cache"
-  max_size_mb: 1000
   ttl_hours: 24
-
-output:
-  directory: "output"
-  template: "default"
-  include_architecture: true
-  include_code_stats: true
-
-logging:
-  level: "INFO"
-  format: "%(message)s"
-
-generation:
-  file_patterns:
-    - "*.py"
-    - "*.js"
-    - "*.ts"
-    - "*.jsx"
-    - "*.tsx"
-    - "*.cpp"
-    - "*.c"
-    - "*.h"
-    - "*.java"
-    - "*.go"
-    - "*.rs"
 ```
 
-### Platform-Specific Overrides
+## 12. Implementation Timeline
 
-The system automatically applies platform-specific settings:
+### Week 1: Core Implementation
+- **Day 1-2**: Implement `SmartFileSelector` and `IntelligentChunker`
+- **Day 3-4**: Create high-quality prompts in organized structure
+- **Day 5-6**: Simplify `DocumentationGenerator` and integrate components
+- **Day 7**: Initial testing and refinement
 
-- macOS: Enables MLX backend, optimizes for Apple Silicon
-- Linux: Enables CUDA if available, uses appropriate quantization
-- Windows: Uses CPU optimization, Docker recommendations
+### Week 2: Testing and Validation
+- **Day 1-3**: Test on various codebase sizes and types
+- **Day 4-5**: Refine prompts based on output quality
+- **Day 6-7**: Performance optimization and bug fixes
 
-## 8. Usage Examples
+### Week 3: Polish and Documentation
+- **Day 1-2**: Update documentation and architecture diagrams
+- **Day 3-4**: CLI improvements and user experience
+- **Day 5-7**: Final testing and release preparation
 
-### Basic Usage
+## 13. Architecture Documentation
 
-```bash
-# Generate documentation for a single file
-docgenai generate myfile.py
+The system architecture and data flow diagrams are maintained in `docs/architecture.md` and updated with each implementation change to ensure they remain current and accurate.
 
-# Process entire directory
-docgenai generate src/ --output-dir docs
+---
 
-# Include only specific file types
-docgenai generate . --patterns "*.py" --patterns "*.js"
-
-# Quick test without saving
-docgenai test example.py
-
-# Show system information
-docgenai info
-
-# Manage cache
-docgenai cache        # Show stats
-docgenai cache --all  # Clear cache
-```
-
-### Advanced Usage
-
-```bash
-# Custom configuration
-docgenai --config custom.yaml generate src/
-
-# Disable architecture analysis for speed
-docgenai generate large_project/ --no-architecture
-
-# Verbose logging for debugging
-docgenai --verbose generate problematic_file.py
-
-# Interactive documentation tuning (Milestone 4)
-docgenai interactive myfile.py
-```
-
-## 9. Performance Expectations
-
-### macOS Performance (Apple Silicon)
-
-| Operation | First Run | Cached | Memory |
-|-----------|-----------|---------|---------|
-| Model Loading | 30-60s | 5-10s | 4-6GB |
-| Single File | 10-30s | 2-5s | +1-2GB |
-| Directory (10 files) | 2-5min | 30-60s | +2-4GB |
-
-### Linux/Windows (CUDA)
-
-| Operation | First Run | Cached | Memory |
-|-----------|-----------|---------|---------|
-| Model Loading | 60-120s | 10-20s | 8-12GB |
-| Single File | 15-45s | 3-8s | +2-4GB |
-| Directory (10 files) | 3-8min | 45-90s | +4-8GB |
-
-### Linux/Windows (CPU)
-
-| Operation | First Run | Cached | Memory |
-|-----------|-----------|---------|---------|
-| Model Loading | 120-300s | 20-60s | 6-10GB |
-| Single File | 30-90s | 5-15s | +2-3GB |
-| Directory (10 files) | 5-15min | 60-180s | +3-6GB |
-
-## 10. Quality Assurance
-
-### Documentation Quality Metrics
-
-- **Completeness**: All major functions and classes documented
-- **Clarity**: Technical concepts explained in accessible language
-- **Architecture**: System design and patterns clearly described
-- **Examples**: Practical usage examples included
-- **Consistency**: Uniform formatting and structure
-
-### Testing Strategy
-
-1. **Unit Tests**: Individual component validation
-2. **Integration Tests**: End-to-end workflow testing
-3. **Platform Tests**: macOS MLX vs Linux/Windows Transformers
-4. **Performance Tests**: Speed and memory usage benchmarks
-5. **Quality Tests**: Documentation output validation
-
-### Continuous Improvement
-
-- User feedback collection and analysis
-- Model performance monitoring
-- Documentation quality assessment
-- Platform-specific optimization tracking
-- Cache efficiency measurement
-
-## 11. Future Roadmap
-
-### Short Term (1-3 months)
-
-- Complete Milestone 4 (Interactive features)
-- Comprehensive testing and validation
-- Performance optimization
-- User documentation completion
-
-### Medium Term (3-6 months)
-
-- PyPI distribution
-- IDE integrations
-- Advanced template system
-- Multi-repository support
-
-### Long Term (6+ months)
-
-- Custom model fine-tuning
-- Web interface development
-- Enterprise features
-- Community template marketplace
-
-## 12. Success Criteria
-
-### Technical Success
-
-- ✅ Platform detection working reliably
-- ✅ Model loading under 2 minutes on all platforms
-- ✅ Documentation generation under 1 minute per file
-- [ ] 95%+ test coverage
-- [ ] Memory usage under 8GB for typical workflows
-
-### User Experience Success
-
-- ✅ Intuitive CLI with helpful error messages
-- ✅ Clear progress indicators and logging
-- [ ] Interactive documentation tuning
-- [ ] Comprehensive user documentation
-- [ ] Positive user feedback and adoption
-
-### Quality Success
-
-- [ ] Generated documentation passes human review
-- [ ] Consistent output across different code styles
-- [ ] Accurate architecture analysis
-- [ ] Minimal false positives in code understanding
-- [ ] Extensible template system
-
-This plan represents a complete reimagining of DocGenAI with DeepSeek-V3 at its core, focusing on platform optimization, user experience, and high-quality documentation generation.
-
-## 13. Documentation Quality Improvements & Multi-Audience Strategy
-
-### Background & Problem Analysis
-
-Based on analysis of generated sample output compared to demo quality, significant improvements are needed in documentation structure and audience focus. The current approach generates generic documentation that serves neither developers nor users effectively.
-
-**Key Issues Identified:**
-
-- Generic descriptions instead of specific file interactions
-- No clear "purpose" sections explaining the "why"
-- Module structure documentation but not relationship-focused
-- Mixed audience targeting (neither developer nor user focused)
-- Missing architectural insights that multi-file analysis should provide
-
-**Demo Quality Reference:**
-The `test_output/multi_file_demo.md` demonstrates superior structure with:
-
-- ✅ **Overall Purpose** - Clear "why does this exist" explanation
-- ✅ **File Interactions** - Specific file-by-file relationship breakdown
-- ✅ **Class Relationships** - Core abstractions and how they connect
-- ✅ **Design Patterns** - Architectural patterns identified and explained
-
-### Multi-Audience Documentation Strategy
-
-#### Primary Audience: Software Engineers (Systems Architecture Focus)
-
-**Requirements:**
-
-- Deep technical understanding of system architecture
-- File interaction patterns and module dependencies
-- Class relationship diagrams and strategic abstractions
-- Design pattern identification with architectural rationale
-- Extension points and development guidance
-- Microservices architecture insights
-
-#### Secondary Audience: Application Users
-
-**Requirements:**
-
-- How to use the tool effectively
-- Command-line interface with practical examples
-- Configuration options and setup guidance
-- Troubleshooting and operational guidance
-- No code examples, but comprehensive CLI examples
-
-**Decision: Generate both document types by default** with configuration override support.
-
-### File Interaction Analysis Strategy
-
-**Chosen Approach: Module-Level + Strategic Class-Level**
-
-**Rationale for Microservices Architecture:**
-
-- **Service Boundaries**: Module-level shows clear service boundaries and contracts
-- **API Interfaces**: Class-level for key interface/contract classes only
-- **Deployment Mapping**: Modules often map to deployable services
-- **Team Ownership**: Modules typically align with team responsibilities
-- **Token Efficiency**: Lower usage allows analysis of larger systems
-- **Architectural Stability**: Less volatile than method-level analysis
-
-**Implementation Strategy:**
-
-- **Module-level** for overall architecture and service interactions
-- **Class-level** for key interfaces, contracts, and architectural components
-- **Method-level** only for critical integration points or complex algorithms
-
-### Enhanced Prompt Architecture
-
-#### Developer Documentation Prompts
-
-```python
-DEVELOPER_MULTI_FILE_PROMPT = """
-Analyze this codebase for software engineers with systems architecture focus:
-
-1. SYSTEM PURPOSE & ARCHITECTURE
-   - Core problem this solves and architectural approach
-   - Key architectural decisions and trade-offs
-   - Overall system design and philosophy
-
-2. MODULE INTERACTION ANALYSIS
-   - How modules/packages interact and depend on each other
-   - Service boundaries and contracts (microservices perspective)
-   - Data flow between major components
-   - Integration points and APIs
-
-3. KEY CLASS RELATIONSHIPS (Strategic Classes Only)
-   - Core abstractions and interfaces
-   - Design patterns and architectural components
-   - Critical dependency relationships
-   - Extension points and plugin architectures
-
-4. MICROSERVICES ARCHITECTURE INSIGHTS
-   - Service boundary identification
-   - Inter-service communication patterns
-   - Deployment and scaling considerations
-   - Team ownership and development patterns
-
-5. DEVELOPMENT GUIDE
-   - How to extend the system
-   - Key patterns to follow
-   - Architecture constraints and guidelines
-"""
-```
-
-#### User Documentation Prompts
-
-```python
-USER_DOCUMENTATION_PROMPT = """
-Create user documentation for application users:
-
-1. QUICK START
-   - Primary use cases and benefits
-   - Installation and setup steps
-   - First successful run example
-
-2. COMMAND LINE INTERFACE
-   - All available commands with examples
-   - Common usage patterns
-   - Configuration file options
-
-3. CONFIGURATION GUIDE
-   - Environment variables and settings
-   - Configuration file structure
-   - Common configuration scenarios
-
-4. OPERATIONAL GUIDE
-   - Monitoring and logging
-   - Troubleshooting common issues
-   - Performance considerations
-"""
-```
-
-### Project Type Template System
-
-**Supported Project Types:**
-
-```python
-PROJECT_TEMPLATES = {
-    'microservice': {
-        'focus': ['service_boundaries', 'api_contracts', 'deployment'],
-        'sections': ['Service Architecture', 'API Documentation', 'Deployment Guide']
-    },
-    'library': {
-        'focus': ['public_api', 'usage_patterns', 'integration'],
-        'sections': ['API Reference', 'Usage Examples', 'Integration Guide']
-    },
-    'application': {
-        'focus': ['user_workflows', 'configuration', 'operations'],
-        'sections': ['User Guide', 'Configuration', 'Operations Manual']
-    },
-    'framework': {
-        'focus': ['extension_points', 'patterns', 'architecture'],
-        'sections': ['Architecture Guide', 'Extension Guide', 'Best Practices']
-    }
-}
-```
-
-**Template Customization Support:**
-
-- User-defined template directories
-- Custom section definitions
-- Project-specific prompt modifications
-- Template validation and loading system
-
-### Configuration Enhancements
-
-#### New Configuration Parameters
-
-```yaml
-# config.yaml additions
-documentation:
-  generate_both_types: true  # Generate both developer and user docs by default
-  project_type: "auto"      # auto-detect or specify: microservice|library|application|framework
-  detail_level: "module_plus_strategic_class"  # module|class|method|module_plus_strategic_class
-  include_diagrams: false    # Future roadmap item
-  custom_templates: []       # User-defined template paths
-
-output:
-  developer_doc_suffix: "_developer"
-  user_doc_suffix: "_user"
-  separate_files: true       # Generate separate files vs combined
-
-analysis:
-  focus_on_microservices: true    # Emphasize service boundaries and contracts
-  identify_design_patterns: true  # Include design pattern analysis
-  include_extension_points: true  # Document how to extend the system
-```
-
-#### Enhanced CLI Options
-
-```bash
-# New CLI options
---doc-type developer|user|both        # Override default both
---project-type microservice|library|application|framework|auto
---detail-level module|class|method|hybrid
---template-dir path/to/custom/templates
---single-doc                          # Combine both types in one file
---focus-microservices                 # Emphasize microservices patterns
-```
-
-### Architecture for Future Visual Diagrams
-
-**Roadmap Item: Visual Architecture Diagrams**
-
-#### Diagram-Ready Data Structure
-
-```python
-class ArchitectureAnalysis:
-    def __init__(self):
-        self.modules = {}           # Module dependency graph
-        self.services = {}          # Service boundary mapping
-        self.interfaces = {}        # Key interface contracts
-        self.patterns = {}          # Design patterns identified
-        self.data_flows = []        # Data flow sequences
-
-    def to_mermaid_diagram(self):
-        """Future: Generate Mermaid diagrams"""
-        pass
-
-    def to_plantuml_diagram(self):
-        """Future: Generate PlantUML diagrams"""
-        pass
-```
-
-#### Future Diagram Generation Chain
-
-```python
-def architecture_diagram_chain():
-    """Roadmap: Generate visual architecture diagrams"""
-    return PromptChain([
-        PromptStep("analyze_structure", STRUCTURE_ANALYSIS_PROMPT),
-        PromptStep("generate_mermaid", MERMAID_GENERATION_PROMPT),
-        PromptStep("generate_plantuml", PLANTUML_GENERATION_PROMPT)
-    ])
-```
-
-### Expected Output Structure
-
-#### Developer Documentation Example
-
-```markdown
-# MyService Developer Documentation
-
-## 1. System Purpose & Architecture
-- Microservice for user authentication and authorization
-- Event-driven architecture with async messaging
-- Hexagonal architecture with clear domain boundaries
-
-## 2. Module Interaction Analysis
-- `auth/` → Core authentication logic
-- `api/` → REST API controllers (depends on auth)
-- `events/` → Event handling (depends on auth, publishes to message bus)
-- `storage/` → Data persistence (used by auth)
-
-## 3. Key Class Relationships
-- `AuthService` → Primary domain service
-- `UserRepository` → Data access interface
-- `TokenValidator` → JWT token handling
-- `EventPublisher` → Async event publishing
-
-## 4. Microservices Architecture Insights
-- Service boundary: User identity and access management
-- API contracts: REST + async events
-- Deployment: Independent Docker container
-- Team ownership: Identity team
-```
-
-#### User Documentation Example
-
-```markdown
-# MyService User Guide
-
-## 1. Quick Start
-
-```bash
-# Install and run
-docker run myservice:latest
-curl http://localhost:8080/health
-```
-
-## 2. Command Line Interface
-
-```bash
-# Start service
-myservice start --port 8080 --config config.yaml
-
-# Health check
-myservice health
-
-# User management
-myservice user create --email user@example.com
-```
-
-## 3. Configuration Guide
-
-```yaml
-# config.yaml
-server:
-  port: 8080
-  host: 0.0.0.0
-auth:
-  jwt_secret: your-secret-key
-  token_expiry: 24h
-```
-
-### Implementation Phases
-
-#### Phase 1: Enhanced Prompt System (Immediate)
-
-- ✅ **Approved**: Module + Strategic Class analysis level
-- [ ] Update prompt templates with new structure
-- [ ] Add microservices architecture focus
-- [ ] Implement project type detection
-- [ ] Create dual-audience prompt chains
-
-#### Phase 2: Configuration & CLI (Immediate)
-
-- [ ] Add documentation type configuration parameters
-- [ ] Implement CLI options for document type selection
-- [ ] Add project type auto-detection logic
-- [ ] Support custom template directories
-
-#### Phase 3: Template System (Next Phase)
-
-- [ ] Create project type template system
-- [ ] Add user customization support
-- [ ] Template validation and loading
-- [ ] Documentation for template creation
-
-#### Phase 4: Visual Diagrams (Roadmap)
-
-- [ ] Implement architecture analysis data structure
-- [ ] Add Mermaid diagram generation
-- [ ] Add PlantUML diagram support
-- [ ] Interactive architecture exploration
-
-### Success Metrics
-
-#### Documentation Quality Improvements
-
-- **Structure**: Match demo quality with clear sections
-- **Developer Focus**: Actionable insights for software engineers
-- **User Focus**: Practical guidance for application users
-- **Architecture**: Clear microservices and system design insights
-- **Relationships**: Specific file and module interaction analysis
-
-#### Multi-Audience Success
-
-- **Developer Docs**: Technical depth with architectural insights
-- **User Docs**: Practical usage with CLI examples
-- **Separation**: Clear audience targeting
-- **Customization**: Flexible template and configuration system
-
-#### Technical Implementation
-
-- **Backward Compatibility**: Existing workflows continue to work
-- **Performance**: No significant impact on generation time
-- **Token Efficiency**: Optimized prompts for context limits
-- **Extensibility**: Easy to add new project types and templates
-
-This comprehensive enhancement plan addresses the core documentation quality issues while establishing a foundation for future visual diagram capabilities and extensive customization options.
+This simplified approach focuses on what matters: selecting the right files, asking the right questions, and letting the LLM do what it does best - understand and explain code.

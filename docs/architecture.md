@@ -1,0 +1,309 @@
+# DocGenAI System Architecture
+
+## Overview
+
+DocGenAI is a simplified, LLM-first documentation generation system that focuses on smart file selection and intelligent chunking to produce high-quality technical documentation.
+
+**Last Updated**: 2024-12-19
+**Version**: Simplified Architecture v2.0
+
+## System Architecture
+
+```mermaid
+graph TB
+    subgraph "User Interface"
+        CLI[CLI Interface<br/>click-based]
+    end
+
+    subgraph "Core Engine"
+        DG[Documentation Generator<br/>Simplified Core]
+        FS[Smart File Selector<br/>Heuristics-based]
+        IC[Intelligent Chunker<br/>Token-aware]
+    end
+
+    subgraph "AI Processing"
+        MODEL[DeepSeek-V3 Model<br/>Platform-aware]
+        PROMPTS[Prompt System<br/>Purpose-specific]
+        CHAINS[Prompt Chains<br/>Refinement workflows]
+    end
+
+    subgraph "Output System"
+        TEMPLATES[Template Engine<br/>Jinja2]
+        CACHE[Simple Cache<br/>File-based]
+        OUTPUT[Generated Docs<br/>Markdown]
+    end
+
+    CLI --> DG
+    DG --> FS
+    DG --> IC
+    FS --> IC
+    IC --> MODEL
+    MODEL --> PROMPTS
+    PROMPTS --> CHAINS
+    CHAINS --> TEMPLATES
+    TEMPLATES --> CACHE
+    CACHE --> OUTPUT
+    OUTPUT --> CLI
+```
+
+## Data Flow
+
+### 1. File Selection Flow
+
+```mermaid
+graph TD
+    START[Codebase Path] --> FS[Smart File Selector]
+    FS --> EP[Find Entry Points<br/>main.py, index.js, etc.]
+    FS --> CF[Find Config Files<br/>package.json, requirements.txt]
+    FS --> API[Find API Files<br/>routes, controllers, services]
+    FS --> CORE[Find Core Files<br/>largest/most connected]
+    FS --> DOC[Find Documentation<br/>README, docs]
+
+    EP --> PRIORITIZE[Prioritize & Limit<br/>max 50 files]
+    CF --> PRIORITIZE
+    API --> PRIORITIZE
+    CORE --> PRIORITIZE
+    DOC --> PRIORITIZE
+
+    PRIORITIZE --> SELECTED[Selected Files List]
+```
+
+### 2. Chunking Flow
+
+```mermaid
+graph TD
+    SELECTED[Selected Files] --> IC[Intelligent Chunker]
+    IC --> READ[Read File Smart<br/>Extract signatures if large]
+    READ --> ESTIMATE[Estimate Tokens<br/>Per file]
+    ESTIMATE --> DECISION{Fits in chunk?}
+
+    DECISION -->|Yes| ADD[Add to Current Chunk]
+    DECISION -->|No| SPLIT[Split Large File<br/>or Create New Chunk]
+
+    ADD --> NEXT{More files?}
+    SPLIT --> NEXT
+
+    NEXT -->|Yes| READ
+    NEXT -->|No| CHUNKS[Chunked Files Ready]
+```
+
+### 3. Documentation Generation Flow
+
+```mermaid
+graph TD
+    CHUNKS[Chunked Files] --> MODEL[DeepSeek-V3 Model]
+    MODEL --> PROMPT[Architecture Analysis Prompt]
+    PROMPT --> INITIAL[Initial Documentation]
+
+    INITIAL --> CHAIN_DECISION{Use refinement chain?}
+
+    CHAIN_DECISION -->|No| TEMPLATE[Apply Template]
+    CHAIN_DECISION -->|Yes| ENHANCE[Enhance Interfaces]
+
+    ENHANCE --> DATAFLOW[Add Data Flow Details]
+    DATAFLOW --> POLISH[Final Polish]
+    POLISH --> TEMPLATE
+
+    TEMPLATE --> CACHE[Cache Result]
+    CACHE --> OUTPUT[Final Documentation]
+```
+
+## Component Details
+
+### Smart File Selector
+
+**Purpose**: Identify the most important files for documentation using heuristics.
+
+**Key Methods**:
+- `select_important_files()` - Main selection logic
+- `_find_entry_points()` - Locate application entry points
+- `_find_config_files()` - Find configuration files
+- `_find_api_files()` - Locate API/interface files
+- `_find_core_files()` - Identify core business logic
+- `_prioritize_and_limit()` - Rank and limit file selection
+
+**Selection Criteria**:
+1. **Entry Points**: `main.py`, `index.js`, `app.py`, `server.js`
+2. **Configuration**: `package.json`, `requirements.txt`, `docker-compose.yml`
+3. **API Files**: Routes, controllers, handlers, services
+4. **Core Logic**: Largest files, most imports/exports
+5. **Documentation**: Existing README, docs files
+
+### Intelligent Chunker
+
+**Purpose**: Split selected files into token-aware chunks for LLM processing.
+
+**Key Methods**:
+- `chunk_for_llm()` - Main chunking logic
+- `_read_file_smart()` - Smart file reading with summarization
+- `_extract_signatures()` - Extract function/class signatures
+- `_estimate_tokens()` - Token estimation
+- `_create_chunk()` - Create chunk with metadata
+
+**Chunking Strategy**:
+- **Safety Margin**: Use 80% of context limit (12,000 tokens for 16K context)
+- **File Boundaries**: Prefer keeping files together
+- **Large Files**: Extract signatures and structure only
+- **Overlap**: 500 token overlap between chunks for continuity
+
+### Prompt System
+
+**Purpose**: Organize high-quality prompts for different documentation needs.
+
+**Organization**:
+- `prompts/architecture.py` - Architecture analysis prompts
+- `prompts/synthesis.py` - Multi-chunk synthesis prompts
+- `prompts/refinement.py` - Documentation refinement chains
+- `prompts/base.py` - Base prompt templates
+
+**Chain Processing**:
+1. **Initial Analysis** - Architecture overview
+2. **Interface Enhancement** - API details
+3. **Data Flow Addition** - Process flows
+4. **Final Polish** - Consistency and readability
+
+### Model Abstraction
+
+**Purpose**: Platform-aware model selection and management.
+
+**Platform Support**:
+- **macOS**: MLX-optimized DeepSeek-V3 8-bit
+- **Linux/Windows**: Transformers-based DeepSeek-V3
+- **Automatic Detection**: Context limits and token estimation
+
+**Key Features**:
+- Automatic token limit detection
+- Platform-specific optimizations
+- Consistent API across platforms
+- Error handling and fallbacks
+
+## Configuration System
+
+### File Selection Configuration
+
+```yaml
+file_selection:
+  max_files: 50                    # Maximum files to select
+  max_file_size: 10000            # Characters before signature extraction
+  include_patterns:               # File patterns to include
+    - "*.py"
+    - "*.js"
+    - "*.ts"
+    - "*.go"
+    - "*.java"
+  exclude_patterns:               # Patterns to exclude
+    - "*/node_modules/*"
+    - "*/__pycache__/*"
+    - "*/vendor/*"
+    - "*/build/*"
+    - "*/dist/*"
+```
+
+### Chunking Configuration
+
+```yaml
+chunking:
+  max_chunk_tokens: 12000         # 75% of context limit
+  overlap_tokens: 500             # Overlap between chunks
+  prefer_file_boundaries: true    # Keep files together when possible
+  signature_threshold: 5000       # Characters before signature extraction
+```
+
+### Chain Configuration
+
+```yaml
+chains:
+  default_strategy: "single_pass"  # or "refinement_chain"
+  enable_synthesis: true           # Combine multiple chunks
+  max_refinement_steps: 4          # Limit chain length
+```
+
+## Performance Characteristics
+
+### File Selection Performance
+
+- **Small Codebases** (10-50 files): ~1-2 seconds
+- **Medium Codebases** (100-500 files): ~3-5 seconds
+- **Large Codebases** (1000+ files): ~10-15 seconds
+
+### Chunking Performance
+
+- **Memory Usage**: Minimal - processes files sequentially
+- **Token Estimation**: ~1000 files/second
+- **Signature Extraction**: ~100 large files/second
+
+### Documentation Generation Performance
+
+- **Single Chunk**: 30-60 seconds (model dependent)
+- **Multiple Chunks**: 1-3 minutes (with synthesis)
+- **Refinement Chain**: 2-5 minutes (4 steps)
+
+## Error Handling
+
+### File Selection Errors
+
+- **Permission Denied**: Skip file, log warning
+- **Binary Files**: Skip automatically
+- **Encoding Issues**: Use UTF-8 with error handling
+- **Large Files**: Extract signatures, don't fail
+
+### Chunking Errors
+
+- **Token Overflow**: Split file or extract signatures
+- **Empty Files**: Skip but log
+- **Unreadable Content**: Use fallback encoding
+
+### Model Errors
+
+- **Context Overflow**: Automatic chunking
+- **Rate Limiting**: Exponential backoff
+- **Model Unavailable**: Clear error message
+- **Token Limit Exceeded**: Automatic reduction
+
+## Caching Strategy
+
+### Cache Structure
+
+```
+.docgenai_cache/
+├── file_selections/           # Cached file selections
+│   └── {codebase_hash}.json
+├── chunks/                    # Cached chunks
+│   └── {files_hash}.json
+├── generations/               # Cached generations
+│   └── {chunk_hash}.md
+└── metadata.json             # Cache metadata
+```
+
+### Cache Invalidation
+
+- **File Changes**: Monitor file modification times
+- **Configuration Changes**: Invalidate on config change
+- **TTL**: 24-hour default time-to-live
+- **Manual Clear**: CLI command for cache clearing
+
+## Future Architecture Considerations
+
+### Scalability
+
+- **Parallel Processing**: File selection and chunking can be parallelized
+- **Streaming**: Process large codebases in streaming fashion
+- **Distributed**: Support for distributed processing
+
+### Extensibility
+
+- **Plugin System**: Custom file selectors and chunkers
+- **Model Support**: Easy addition of new models
+- **Output Formats**: Multiple output format support
+- **Integration**: API for external tool integration
+
+### Monitoring
+
+- **Metrics Collection**: Performance and quality metrics
+- **Logging**: Structured logging for debugging
+- **Health Checks**: System health monitoring
+- **Analytics**: Usage pattern analysis
+
+---
+
+This architecture emphasizes simplicity, effectiveness, and maintainability while providing the flexibility needed for high-quality documentation generation across diverse codebases.

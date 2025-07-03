@@ -27,7 +27,7 @@ model:
 
   # Generation parameters
   temperature: 0.1
-  max_tokens: 4000
+  max_tokens: 4000                 # Output tokens (context limit auto-detected from model)
   top_p: 0.9
   min_p: 0.05
   top_k: 50
@@ -119,11 +119,54 @@ documentation:
 
   # Multi-file analysis
   enable_multi_file: true                # Enable multi-file analysis by default
+  use_enhanced_analyzer: false           # Use enhanced analyzer with semantic grouping
+  use_simplified_generator: true         # Use new simplified architecture
   max_files_per_group: 8                # Maximum files per analysis group
 
   # Future features (roadmap)
   include_diagrams: false                # Future: Generate visual diagrams
   custom_templates: []                   # User-defined template paths
+
+# Simplified Architecture Configuration
+file_selection:
+  max_files: 50                          # Maximum files to select for analysis
+  max_file_size: 10000                   # Maximum file size in characters
+  include_patterns:                      # File patterns to include
+    - "*.py"
+    - "*.js"
+    - "*.ts"
+    - "*.jsx"
+    - "*.tsx"
+    - "*.go"
+    - "*.java"
+    - "*.cpp"
+    - "*.c"
+    - "*.h"
+    - "*.rs"
+    - "*.rb"
+    - "*.php"
+  exclude_patterns:                      # Patterns to exclude
+    - "*/node_modules/*"
+    - "*/__pycache__/*"
+    - "*/vendor/*"
+    - "*/build/*"
+    - "*/dist/*"
+    - "*/target/*"
+    - "*/.git/*"
+    - "*/venv/*"
+    - "*/env/*"
+
+chunking:
+  max_chunk_tokens: 12000                # Maximum tokens per chunk (75% of context)
+  overlap_tokens: 500                    # Token overlap between chunks
+  prefer_file_boundaries: true           # Prefer to keep files together
+  signature_threshold: 5000              # File size threshold for signature extraction
+  safety_margin: 0.75                    # Safety margin for token limits
+
+chains:
+  default_strategy: "single_pass"        # Default chaining strategy
+  enable_refinement: false               # Enable documentation refinement chain
+  enable_synthesis: true                 # Enable multi-chunk synthesis
 
 # Template Configuration
 templates:

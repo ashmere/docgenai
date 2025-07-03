@@ -64,6 +64,16 @@ class AIModel(ABC):
         """Get information about the model."""
         pass
 
+    @abstractmethod
+    def get_context_limit(self) -> int:
+        """Get the maximum context length for this model."""
+        pass
+
+    @abstractmethod
+    def estimate_tokens(self, text: str) -> int:
+        """Estimate the number of tokens in the given text."""
+        pass
+
     @staticmethod
     def _get_platform_info():
         """Get platform information for model selection."""
@@ -434,11 +444,59 @@ class DeepSeekCoderModel(AIModel):
             "available": self.is_available(),
             "temperature": self.temperature,
             "max_tokens": self.max_tokens,
+            "context_limit": self.get_context_limit(),
             "quantization": (self.quantization if not self.is_mac else "8bit (MLX)"),
             "offline_mode": self.offline_mode,
             "check_for_updates": self.check_for_updates,
             "local_files_only": self.local_files_only,
         }
+
+    def get_context_limit(self) -> int:
+        """Get the maximum context length for this model."""
+        try:
+            if self.is_mac and self.model is not None:
+                # For MLX models, try to get from model config
+                if hasattr(self.model, "config") and hasattr(
+                    self.model.config, "max_position_embeddings"
+                ):
+                    return self.model.config.max_position_embeddings
+                elif hasattr(self.model, "config") and hasattr(
+                    self.model.config, "model_max_length"
+                ):
+                    return self.model.config.model_max_length
+                # Fallback to known DeepSeek-Coder-V2-Lite limit
+                return 16384
+            elif not self.is_mac and self.model is not None:
+                # For transformers models, check model config
+                if hasattr(self.model.config, "max_position_embeddings"):
+                    return self.model.config.max_position_embeddings
+                elif hasattr(self.model.config, "model_max_length"):
+                    return self.model.config.model_max_length
+                # Fallback to known DeepSeek-Coder-V2-Lite limit
+                return 16384
+            else:
+                # Model not loaded yet, use known default for DeepSeek-Coder-V2-Lite
+                return 16384
+        except Exception as e:
+            logger.warning(f"Could not determine context limit: {e}")
+            # Conservative fallback
+            return 16384
+
+    def estimate_tokens(self, text: str) -> int:
+        """Estimate the number of tokens in the given text."""
+        try:
+            if self.tokenizer is not None:
+                # Use actual tokenizer for accurate count
+                tokens = self.tokenizer.encode(text, add_special_tokens=False)
+                return len(tokens)
+            else:
+                # Fallback to character-based estimation
+                # DeepSeek models typically have ~3-4 chars per token for code
+                return len(text) // 3
+        except Exception as e:
+            logger.warning(f"Could not estimate tokens: {e}")
+            # Conservative fallback
+            return len(text) // 3
 
 
 def create_model(config: Optional[Dict[str, Any]] = None) -> AIModel:

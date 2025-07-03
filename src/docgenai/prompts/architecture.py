@@ -1,0 +1,180 @@
+"""
+Architecture Analysis Prompts for DocGenAI
+
+High-quality prompts designed to generate excellent technical documentation
+for systems engineers and developers who need to understand codebases.
+"""
+
+ARCHITECTURE_ANALYSIS_PROMPT = """
+You are analyzing a codebase to create comprehensive technical documentation
+for systems engineers and developers. Your goal is to help them understand
+the architecture, interfaces, and design patterns effectively.
+
+CODEBASE CONTENT:
+{file_contents}
+
+Create detailed technical documentation with these sections:
+
+## SYSTEM OVERVIEW
+- What does this application/system do? (core purpose and value)
+- What problem does it solve and for whom?
+- What type of system is it? (web app, API, CLI tool, library, etc.)
+- Key business capabilities and use cases
+
+## ARCHITECTURE & DESIGN
+- Overall architecture pattern (MVC, microservices, layered, event-driven, etc.)
+- Key architectural decisions and trade-offs made
+- Major components and their responsibilities
+- How components interact and communicate
+- Design patterns used (Factory, Observer, Strategy, etc.)
+- Scalability and performance considerations
+
+## MAJOR INTERFACES & APIs
+- External APIs exposed (REST endpoints, GraphQL, gRPC, etc.)
+- Request/response formats and data models
+- Authentication and authorization mechanisms
+- Internal interfaces between components
+- Database schemas and data contracts
+- Integration points with other systems
+- Error handling and response patterns
+
+## DATA FLOW & PROCESSING
+- How data enters the system (inputs, events, requests)
+- Key data transformations and processing steps
+- Data storage patterns and persistence layer
+- Caching strategies and performance optimizations
+- Event flows and message passing (if applicable)
+- Data validation and sanitization approaches
+
+## KEY FILES & COMPONENTS
+For each major component, provide:
+- **Purpose**: What this component does and why it exists
+- **Key classes/functions**: Most important code elements
+- **Dependencies**: What it depends on and what depends on it
+- **Configuration**: How it's configured and customized
+- **Entry points**: How to interact with or extend it
+
+## TECHNOLOGY STACK
+- Programming languages and versions
+- Frameworks and libraries used
+- Database technologies and data stores
+- Infrastructure and deployment technologies
+- Build tools and development workflow
+- Testing frameworks and strategies
+
+## DEVELOPER ONBOARDING
+- **Setup instructions**: How to get the system running locally
+- **Key patterns**: Important coding patterns and conventions to follow
+- **Extension points**: Where and how to add new features
+- **Common workflows**: Typical development and deployment processes
+- **Debugging tips**: How to troubleshoot common issues
+- **Testing approach**: How to write and run tests
+
+## OPERATIONAL CONSIDERATIONS
+- Deployment and scaling characteristics
+- Monitoring and observability features
+- Configuration management approach
+- Security considerations and best practices
+- Performance characteristics and bottlenecks
+- Maintenance and operational procedures
+
+---
+
+**IMPORTANT GUIDELINES:**
+- Be specific about file names, class names, and code structure
+- Focus on practical insights that help developers work effectively
+- Explain the "why" behind architectural decisions, not just the "what"
+- Use clear, professional language accessible to both senior and junior developers
+- Include concrete examples from the actual codebase
+- Highlight any unique or non-standard approaches used
+- Point out potential areas for improvement or technical debt
+"""
+
+SYSTEMS_ENGINEER_PROMPT = """
+You are creating documentation specifically for systems engineers who need to
+understand how this codebase fits into larger infrastructure and operational
+contexts.
+
+CODEBASE CONTENT:
+{file_contents}
+
+Focus on these systems engineering concerns:
+
+## SYSTEM BOUNDARIES & INTERFACES
+- What services/systems does this component interact with?
+- Network protocols and communication patterns used
+- Data formats and serialization approaches
+- API contracts and service level agreements
+- Dependencies on external services and their failure modes
+
+## DEPLOYMENT & INFRASTRUCTURE
+- How is this system deployed and configured?
+- Infrastructure requirements (compute, memory, storage, network)
+- Scaling characteristics and bottlenecks
+- Configuration management and environment variables
+- Container/orchestration considerations
+
+## OPERATIONAL CHARACTERISTICS
+- Monitoring and alerting capabilities
+- Logging and observability features
+- Health checks and service discovery
+- Backup and disaster recovery considerations
+- Security boundaries and access controls
+
+## INTEGRATION PATTERNS
+- How does this fit into the overall system architecture?
+- Data flow patterns with upstream/downstream systems
+- Event processing and message handling
+- State management and consistency guarantees
+- Error handling and circuit breaker patterns
+
+Provide specific, actionable insights that help systems engineers operate
+and integrate this component effectively.
+"""
+
+JUNIOR_DEVELOPER_PROMPT = """
+You are creating onboarding documentation for junior developers who need to
+understand this codebase and start contributing effectively.
+
+CODEBASE CONTENT:
+{file_contents}
+
+Focus on these onboarding needs:
+
+## GETTING STARTED
+- What does this project do? (simple explanation)
+- How to set up the development environment
+- How to run the application locally
+- How to run tests and verify everything works
+- Common first tasks for new developers
+
+## CODE ORGANIZATION
+- How is the code organized? (directory structure)
+- Where to find different types of functionality
+- Naming conventions and coding standards
+- Key files every developer should know about
+- How to navigate the codebase effectively
+
+## DEVELOPMENT WORKFLOW
+- How to make changes safely
+- Testing approach and best practices
+- Code review process and expectations
+- How to add new features or fix bugs
+- Common development tools and commands
+
+## KEY CONCEPTS & PATTERNS
+- Important domain concepts and terminology
+- Common patterns used throughout the codebase
+- Key abstractions and interfaces
+- How different parts of the system work together
+- Examples of typical changes and how to implement them
+
+## GETTING HELP
+- Where to find more detailed documentation
+- How to ask questions and get support
+- Common mistakes to avoid
+- Resources for learning more about the technologies used
+
+Use clear, encouraging language that helps junior developers build confidence
+and understanding gradually.
+"""

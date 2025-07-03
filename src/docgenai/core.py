@@ -809,7 +809,20 @@ def generate_documentation(
     """
     from .chaining.context import ChainContext
     from .models import create_model
-    from .multi_file_analyzer import MultiFileAnalyzer
+
+    # Choose analyzer based on config
+    use_enhanced = (
+        config.get("documentation", {}).get("use_enhanced_analyzer", False)
+        if config
+        else False
+    )
+
+    if use_enhanced:
+        from .enhanced_multi_file_analyzer import (
+            EnhancedMultiFileAnalyzer as MultiFileAnalyzer,
+        )
+    else:
+        from .multi_file_analyzer import MultiFileAnalyzer
 
     if config is None:
         config = load_config()
@@ -890,12 +903,24 @@ def _generate_multi_file_documentation(
         Generation result dictionary
     """
     from .chaining.context import ChainContext
-    from .multi_file_analyzer import MultiFileAnalyzer
+
+    # Choose analyzer based on config
+    use_enhanced = config.get("documentation", {}).get("use_enhanced_analyzer", False)
+
+    if use_enhanced:
+        from .enhanced_multi_file_analyzer import (
+            EnhancedMultiFileAnalyzer as MultiFileAnalyzer,
+        )
+    else:
+        from .multi_file_analyzer import MultiFileAnalyzer
 
     logger.info("🔗 Starting multi-file analysis...")
 
-    # Initialize analyzer
-    analyzer = MultiFileAnalyzer(config)
+    # Initialize analyzer with model for automatic token detection
+    if use_enhanced:
+        analyzer = MultiFileAnalyzer(config, model)
+    else:
+        analyzer = MultiFileAnalyzer(config)
 
     # Analyze codebase structure
     codebase_structure = analyzer.analyze_codebase_structure(target_path)
@@ -978,6 +1003,11 @@ def _analyze_single_group(
     chain_context.set_input("file_count", context["file_count"])
     chain_context.set_input("file_names", context["file_names"])
     chain_context.set_input("project_type", project_type)
+    # Add variables needed by codebase strategy
+    chain_context.set_input("total_files", context["file_count"])
+    chain_context.set_input("total_size", context.get("total_size", 0))
+    chain_context.set_input("primary_language", "python")  # Default fallback
+    chain_context.set_input("groups", 1)  # Single group for this strategy
 
     # Execute steps
     for step in chain.steps:

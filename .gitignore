@@ -204,6 +204,7 @@ external/
 # Output directories
 output/
 docs/generated/
+test_output/
 
 # Prompt engineering educational files
 .prompt_history.txt

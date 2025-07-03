@@ -135,6 +135,11 @@ def cli(ctx, config, verbose):
     default="module_plus_strategic_class",
     help="Level of detail for file interaction analysis",
 )
+@click.option(
+    "--simplified",
+    is_flag=True,
+    help="Use simplified architecture with smart file selection and intelligent chunking",
+)
 @click.pass_context
 def generate(
     ctx,
@@ -152,6 +157,7 @@ def generate(
     doc_type,
     project_type,
     detail_level,
+    simplified,
 ):
     """
     Generate documentation for source code files.
@@ -254,29 +260,48 @@ def generate(
     start_time = time.time()
 
     try:
-        result = generate_documentation(
-            target_path,
-            output_dir=output_dir,
-            template_file=template,
-            style_guide_file=style_guide,
-            config=config,
-            diagrams=diagrams,
-        )
+        if simplified:
+            # Use simplified architecture
+            from .simple_core import generate_documentation_simplified
+
+            result = generate_documentation_simplified(
+                codebase_path=str(target_path),
+                output_dir=output_dir,
+                config=config,
+            )
+        else:
+            # Use legacy architecture
+            result = generate_documentation(
+                target_path,
+                output_dir=output_dir,
+                template_file=template,
+                style_guide_file=style_guide,
+                config=config,
+                diagrams=diagrams,
+            )
 
         elapsed_time = time.time() - start_time
 
         if result.get("success", False):
             logger.info(f"✅ Documentation generated successfully!")
-            logger.info(f"📄 Output: {result.get('output_files', [])}")
-            logger.info(f"⏱️  Time: {elapsed_time:.2f} seconds")
 
-            # Show multi-file specific stats
-            if use_multi_file and "multi_file_stats" in result:
-                stats = result["multi_file_stats"]
-                logger.info(f"📊 Multi-file stats:")
-                logger.info(f"  - Groups analyzed: {stats.get('groups', 0)}")
-                logger.info(f"  - Total files: {stats.get('total_files', 0)}")
-                logger.info(f"  - Synthesis: {stats.get('synthesis_used', False)}")
+            # Handle different result formats
+            if simplified:
+                logger.info(f"📄 Output: {result.get('output_path', 'Unknown')}")
+                logger.info(f"📊 Files analyzed: {result.get('files_analyzed', 0)}")
+                logger.info(f"📦 Chunks created: {result.get('chunks_created', 0)}")
+            else:
+                logger.info(f"📄 Output: {result.get('output_files', [])}")
+
+                # Show multi-file specific stats
+                if use_multi_file and "multi_file_stats" in result:
+                    stats = result["multi_file_stats"]
+                    logger.info(f"📊 Multi-file stats:")
+                    logger.info(f"  - Groups analyzed: {stats.get('groups', 0)}")
+                    logger.info(f"  - Total files: {stats.get('total_files', 0)}")
+                    logger.info(f"  - Synthesis: {stats.get('synthesis_used', False)}")
+
+            logger.info(f"⏱️  Time: {elapsed_time:.2f} seconds")
         else:
             logger.error(f"❌ Documentation generation failed")
             logger.error(f"Error: {result.get('error', 'Unknown error')}")

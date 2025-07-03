@@ -8,6 +8,8 @@ MD022: false # allow for trail navigation
 MD024: false # allow duplicate headings in AI-generated documentation
 MD025: false # allow multiple top-level headings in AI-generated documentation
 MD029: false # ol-prefix gets confused with indented blocks in lists
+MD032: false # allow lists to be indented
+MD040: false # allow fenced code blocks to be indented
 MD034: false
 MD036: false # allow for admonitions
 MD041: false # ignore first-line-heading to allow for trail navigation
