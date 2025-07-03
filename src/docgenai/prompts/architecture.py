@@ -208,3 +208,214 @@ Focus on these onboarding needs:
 Use clear, encouraging language that helps junior developers build confidence
 and understanding gradually.
 """
+
+COMPREHENSIVE_ARCHITECTURE_PROMPT = f"""
+You are analyzing a codebase to create comprehensive architecture documentation
+similar to high-quality system architecture documents. Your goal is to provide
+a complete architectural overview that serves both systems engineers and
+developers.
+
+{_builder.MARKDOWN_FORMATTING_RULES}
+
+CODEBASE CONTENT:
+{{file_contents}}
+
+Generate comprehensive architecture documentation with the following structure:
+
+## System Overview
+
+Provide a high-level description of the system including:
+- What the system does (core purpose and business value)
+- System type (web application, API, library, CLI tool, microservice, etc.)
+- Key business capabilities and target users
+- Technology stack overview
+
+## System Architecture
+
+Create a Mermaid diagram showing the main system components and their
+relationships:
+
+```mermaid
+graph TB
+    subgraph "User Interface Layer"
+        UI[Component Names]
+    end
+
+    subgraph "Application Layer"
+        APP[Core Components]
+    end
+
+    subgraph "Data Layer"
+        DATA[Data Components]
+    end
+
+    UI --> APP
+    APP --> DATA
+```
+
+Describe the architecture pattern used (MVC, layered, microservices, etc.) and
+explain why this pattern was chosen.
+
+## Data Flow Analysis
+
+### Primary Data Flow
+
+Create a Mermaid diagram showing how data flows through the system:
+
+```mermaid
+graph TD
+    INPUT[Data Input] --> PROCESS[Processing Steps]
+    PROCESS --> OUTPUT[Data Output]
+
+    PROCESS --> STORE[Data Storage]
+    STORE --> RETRIEVE[Data Retrieval]
+```
+
+### Key Processing Flows
+
+For each major workflow, create detailed flow diagrams showing:
+- Input sources and validation
+- Processing steps and transformations
+- Output destinations and formats
+- Error handling paths
+
+## Component Details
+
+### Core Components
+
+For each major component identified, provide:
+
+#### Component Name
+- **Purpose**: What this component does
+- **Key Methods/Functions**: Main interfaces and operations
+- **Dependencies**: What this component depends on
+- **Data Handled**: Input/output data types and formats
+- **Configuration**: How the component is configured
+- **Error Handling**: How errors are managed
+
+### Integration Points
+
+Document how components interact:
+- API contracts and interfaces
+- Data exchange formats
+- Communication protocols
+- Dependency relationships
+
+## Configuration System
+
+Show the configuration structure with examples:
+
+```yaml
+# Example configuration structure
+component_name:
+  setting1: value1
+  setting2: value2
+  nested_config:
+    option1: true
+    option2: "example"
+```
+
+Document:
+- Configuration file locations
+- Environment variable usage
+- Default values and overrides
+- Validation rules
+
+## Performance Characteristics
+
+Analyze and document:
+
+### Performance Metrics
+- Response times for key operations
+- Throughput capabilities
+- Resource usage (CPU, memory, disk)
+- Scalability limits
+
+### Optimization Strategies
+- Caching mechanisms used
+- Database query optimization
+- Asynchronous processing
+- Resource pooling
+
+## Error Handling Strategy
+
+Document the error handling approach:
+
+### Error Categories
+- Input validation errors
+- Processing errors
+- External service failures
+- Resource exhaustion
+
+### Error Handling Patterns
+- How errors are caught and processed
+- Error logging and monitoring
+- Recovery mechanisms
+- User-facing error messages
+
+## Security Architecture
+
+If applicable, document:
+- Authentication mechanisms
+- Authorization patterns
+- Data encryption
+- Security boundaries
+- Input validation and sanitization
+
+## Deployment Architecture
+
+Describe how the system is deployed:
+- Deployment environments
+- Infrastructure requirements
+- Scaling strategies
+- Monitoring and health checks
+
+## Architecture Benefits
+
+Explain why this architecture was chosen:
+- **Maintainability**: How the architecture supports maintenance
+- **Scalability**: How the system can grow
+- **Reliability**: How reliability is ensured
+- **Performance**: Performance advantages
+- **Developer Experience**: How it helps developers
+
+## Future Architecture Considerations
+
+Discuss potential improvements:
+- **Scalability Enhancements**: How to handle growth
+- **Performance Optimizations**: Areas for improvement
+- **Technology Upgrades**: Potential technology changes
+- **Integration Opportunities**: New integration possibilities
+
+---
+
+Focus on providing concrete, actionable insights that help developers
+understand not just what the system does, but why it's designed this way and
+how to work with it effectively. Include specific examples from the codebase
+where possible.
+"""
+
+
+# Module-level convenience functions for backward compatibility
+def get_architecture_analysis_prompt(file_contents: str) -> str:
+    """Get the main architecture analysis prompt."""
+    builder = ArchitecturePromptBuilder()
+    return builder.build_architecture_analysis_prompt(file_contents)
+
+
+def get_systems_engineer_prompt(file_contents: str) -> str:
+    """Get the systems engineer focused prompt."""
+    builder = ArchitecturePromptBuilder()
+    return builder.build_systems_engineer_prompt(file_contents)
+
+
+def get_junior_developer_prompt(file_contents: str) -> str:
+    """Get the junior developer focused prompt."""
+    builder = ArchitecturePromptBuilder()
+    return builder.build_junior_developer_prompt(file_contents)
+
+
+def get_comprehensive_architecture_prompt(file_contents: str) -> str:
+    """Get the comprehensive architecture analysis prompt with Mermaid
+    diagrams."""
+    return COMPREHENSIVE_ARCHITECTURE_PROMPT.format(file_contents=file_contents)
