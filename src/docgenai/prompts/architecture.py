@@ -217,6 +217,17 @@ developers.
 
 {_builder.MARKDOWN_FORMATTING_RULES}
 
+🚨 CRITICAL MERMAID DIAGRAM RULE:
+After every Mermaid diagram, write regular text directly.
+NEVER add ```text after a Mermaid diagram.
+Example:
+```mermaid
+graph TD
+    A --> B
+```
+
+This is the correct way to continue with text after a Mermaid diagram.
+
 CODEBASE CONTENT:
 {{file_contents}}
 
@@ -417,5 +428,6 @@ def get_junior_developer_prompt(file_contents: str) -> str:
 
 def get_comprehensive_architecture_prompt(file_contents: str) -> str:
     """Get the comprehensive architecture analysis prompt with Mermaid
-    diagrams."""
+    diagrams.
+    """
     return COMPREHENSIVE_ARCHITECTURE_PROMPT.format(file_contents=file_contents)

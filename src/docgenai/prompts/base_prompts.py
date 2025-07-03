@@ -27,6 +27,19 @@ class BasePromptBuilder:
 - Keep code examples complete and well-formatted
 - Avoid adding text immediately after closing code blocks
 
+**MERMAID DIAGRAM FORMATTING - CRITICAL:**
+⚠️ ALWAYS format Mermaid diagrams exactly like this:
+```mermaid
+graph TD
+    A[Component A] --> B[Component B]
+    B --> C[Component C]
+```
+
+⚠️ NEVER write ```text after a Mermaid diagram
+⚠️ NEVER leave Mermaid diagrams unclosed
+⚠️ ALWAYS use ```mermaid to open and ``` to close
+⚠️ Put a blank line before and after each Mermaid diagram
+
 **Response format:**
 Write the documentation as direct markdown content. Start with:
 

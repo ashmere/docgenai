@@ -16,6 +16,7 @@ from .chunker import Chunker, FileChunk
 from .file_selector import FileSelector
 from .models import AIModel
 from .prompts import ARCHITECTURE_ANALYSIS_PROMPT, MULTI_CHUNK_SYNTHESIS_PROMPT
+from .prompts.architecture import COMPREHENSIVE_ARCHITECTURE_PROMPT
 from .prompts.refinement import create_refinement_chain
 from .templates import TemplateManager
 
@@ -123,11 +124,22 @@ class DocumentationGenerator:
         """Analyze a single chunk of files."""
         logger.info(f"📝 Analyzing chunk with {len(chunk.files)} files")
 
-        # Use architecture analysis prompt
-        prompt = ARCHITECTURE_ANALYSIS_PROMPT.format(file_contents=chunk.content)
+        # Select architecture prompt based on configuration
+        architecture_type = self.config.get("output", {}).get(
+            "architecture_type", "standard"
+        )
+        if architecture_type == "comprehensive":
+            prompt = COMPREHENSIVE_ARCHITECTURE_PROMPT.format(
+                file_contents=chunk.content
+            )
+        else:
+            prompt = ARCHITECTURE_ANALYSIS_PROMPT.format(file_contents=chunk.content)
 
         # Generate documentation
         documentation = self.model.generate_raw_response(prompt)
+
+        # Clean up Mermaid formatting issues
+        documentation = self._clean_mermaid_formatting(documentation)
 
         # Handle metadata based on configuration
         metadata_mode = self.output_config.get("metadata_mode", "footer")
@@ -154,7 +166,18 @@ class DocumentationGenerator:
         for i, chunk in enumerate(chunks):
             logger.info(f"📝 Analyzing chunk {i+1}/{len(chunks)}")
 
-            prompt = ARCHITECTURE_ANALYSIS_PROMPT.format(file_contents=chunk.content)
+            # Select architecture prompt based on configuration
+            architecture_type = self.config.get("output", {}).get(
+                "architecture_type", "standard"
+            )
+            if architecture_type == "comprehensive":
+                prompt = COMPREHENSIVE_ARCHITECTURE_PROMPT.format(
+                    file_contents=chunk.content
+                )
+            else:
+                prompt = ARCHITECTURE_ANALYSIS_PROMPT.format(
+                    file_contents=chunk.content
+                )
 
             analysis = self.model.generate_raw_response(prompt)
             chunk_analyses.append(f"## CHUNK {i+1} ANALYSIS\n\n{analysis}")
@@ -166,6 +189,9 @@ class DocumentationGenerator:
         )
 
         documentation = self.model.generate_raw_response(synthesis_prompt)
+
+        # Clean up Mermaid formatting issues
+        documentation = self._clean_mermaid_formatting(documentation)
 
         # Handle metadata based on configuration
         metadata_mode = self.output_config.get("metadata_mode", "footer")
@@ -205,6 +231,36 @@ class DocumentationGenerator:
         except Exception as e:
             logger.warning(f"⚠️ Refinement failed, using original: {e}")
             return documentation
+
+    def _clean_mermaid_formatting(self, documentation: str) -> str:
+        """Clean up Mermaid diagram formatting issues."""
+        # Check if we have the problematic pattern
+        if "```text" in documentation:
+            logger.info("🐛 Found ```text in documentation, cleaning...")
+
+        # Simple approach: remove all standalone ```text lines
+        # This handles all cases where ```text appears on its own line
+        lines = documentation.split("\n")
+        cleaned_lines = []
+        removed_count = 0
+
+        for line in lines:
+            # Skip lines that are exactly ```text (with optional whitespace)
+            if line.strip() == "```text":
+                removed_count += 1
+                continue
+            cleaned_lines.append(line)
+
+        cleaned = "\n".join(cleaned_lines)
+        logger.info(f"🧹 Removed {removed_count} ```text lines")
+
+        # Check if cleaning worked
+        if "```text" in cleaned:
+            logger.warning("⚠️ Still found ```text after cleaning!")
+        else:
+            logger.info("✅ Successfully cleaned ```text patterns")
+
+        return cleaned
 
     def _create_metadata(self, files: List[Path], chunks: List[FileChunk]) -> str:
         """Create metadata section for the documentation."""
