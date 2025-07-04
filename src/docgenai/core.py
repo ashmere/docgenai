@@ -241,18 +241,28 @@ class DocumentationGenerator:
             text_count = documentation.count("```text")
             logger.info(f"🔍 Found {text_count} instances of ```text")
 
-        # Simple approach: remove all standalone ```text lines
-        # This handles all cases where ```text appears on its own line
+        # Enhanced approach: remove ```text lines and following empty lines
+        # This handles the common pattern of ```text followed by empty line
         lines = documentation.split("\n")
         cleaned_lines = []
         removed_count = 0
+        skip_next_empty = False
 
         for i, line in enumerate(lines):
             # Skip lines that are exactly ```text (with optional whitespace)
             if line.strip() == "```text":
                 logger.debug(f"🗑️ Removing line {i}: {repr(line)}")
                 removed_count += 1
+                skip_next_empty = True  # Skip the next empty line if present
                 continue
+
+            # Skip the empty line that follows ```text
+            if skip_next_empty and line.strip() == "":
+                logger.debug(f"🗑️ Removing empty line {i} after ```text")
+                skip_next_empty = False
+                continue
+
+            skip_next_empty = False
             cleaned_lines.append(line)
 
         cleaned = "\n".join(cleaned_lines)
