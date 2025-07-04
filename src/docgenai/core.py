@@ -237,6 +237,9 @@ class DocumentationGenerator:
         # Check if we have the problematic pattern
         if "```text" in documentation:
             logger.info("🐛 Found ```text in documentation, cleaning...")
+            # Count occurrences for debugging
+            text_count = documentation.count("```text")
+            logger.info(f"🔍 Found {text_count} instances of ```text")
 
         # Simple approach: remove all standalone ```text lines
         # This handles all cases where ```text appears on its own line
@@ -244,9 +247,10 @@ class DocumentationGenerator:
         cleaned_lines = []
         removed_count = 0
 
-        for line in lines:
+        for i, line in enumerate(lines):
             # Skip lines that are exactly ```text (with optional whitespace)
             if line.strip() == "```text":
+                logger.debug(f"🗑️ Removing line {i}: {repr(line)}")
                 removed_count += 1
                 continue
             cleaned_lines.append(line)
@@ -256,7 +260,21 @@ class DocumentationGenerator:
 
         # Check if cleaning worked
         if "```text" in cleaned:
-            logger.warning("⚠️ Still found ```text after cleaning!")
+            remaining_count = cleaned.count("```text")
+            logger.warning(
+                f"⚠️ Still found {remaining_count} ```text instances after cleaning!"
+            )
+
+            # Debug: Show context around remaining ```text
+            remaining_lines = cleaned.split("\n")
+            for i, line in enumerate(remaining_lines):
+                if "```text" in line:
+                    start = max(0, i - 2)
+                    end = min(len(remaining_lines), i + 3)
+                    logger.warning(f"📍 Context around line {i}:")
+                    for j in range(start, end):
+                        marker = ">>> " if j == i else "    "
+                        logger.warning(f"{marker}{j}: {repr(remaining_lines[j])}")
         else:
             logger.info("✅ Successfully cleaned ```text patterns")
 
