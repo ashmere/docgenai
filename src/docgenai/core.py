@@ -234,12 +234,17 @@ class DocumentationGenerator:
 
     def _clean_mermaid_formatting(self, documentation: str) -> str:
         """Clean up Mermaid diagram formatting issues."""
+        logger.info("🔧 Starting Mermaid formatting cleanup...")
+        logger.info(f"📏 Input documentation length: {len(documentation)} chars")
+
         # Check if we have the problematic pattern
         if "```text" in documentation:
             logger.info("🐛 Found ```text in documentation, cleaning...")
             # Count occurrences for debugging
             text_count = documentation.count("```text")
             logger.info(f"🔍 Found {text_count} instances of ```text")
+        else:
+            logger.info("✅ No ```text patterns found in input")
 
         # Enhanced approach: remove ```text lines and following empty lines
         # This handles the common pattern of ```text followed by empty line

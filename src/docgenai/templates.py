@@ -295,7 +295,21 @@ All generated documentation files are available in the output directory.
         content = re.sub(r"(```)\n([^\n\s])", r"\1\n\n\2", content)
 
         # Add language to fenced code blocks without language
-        content = re.sub(r"\n```\n", r"\n```text\n", content)
+        # (but not after Mermaid diagrams)
+        # Use a more sophisticated approach to avoid Mermaid closings
+        lines = content.split("\n")
+        in_mermaid = False
+        for i, line in enumerate(lines):
+            if line.strip() == "```mermaid":
+                in_mermaid = True
+            elif line.strip() == "```" and in_mermaid:
+                in_mermaid = False
+                # Don't add 'text' to Mermaid closing
+                continue
+            elif line.strip() == "```" and not in_mermaid:
+                # This is a code block without language, add 'text'
+                lines[i] = "```text"
+        content = "\n".join(lines)
 
         # Fix duplicate headings by adding numbers
         lines = content.split("\n")
