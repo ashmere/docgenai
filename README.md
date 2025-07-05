@@ -59,6 +59,7 @@ DocGenAI generates different types of documentation depending on your codebase s
 - Typically starts with `## System Overview`
 
 **Example output structure**:
+
 ```markdown
 ## System Overview
 ## System Architecture
@@ -68,8 +69,10 @@ graph TB
         UI[Component Names]
     end
 ```
+
 ## Data Flow Analysis
 ## Component Details
+
 ```
 
 ### Multi-Chunk Documentation (Unified Documentation)
@@ -84,6 +87,7 @@ graph TB
 - More comprehensive than single-chunk analysis
 
 **Example output structure**:
+
 ```markdown
 ## UNIFIED DOCUMENTATION
 
@@ -95,10 +99,12 @@ graph TB
 graph TD
     [Components from all chunks]
 ```
+
 [Unified architectural analysis]
 
 ## DATA FLOW & PROCESSING
 [System-wide data flow analysis]
+
 ```
 
 **What "Unified" means**: The documentation synthesizes analysis from multiple code chunks into a single, coherent view of your entire system. Instead of separate analyses of different parts, you get one comprehensive document that explains how everything works together.
@@ -165,21 +171,27 @@ chunking:
 DocGenAI supports three metadata modes to suit different workflows:
 
 ### `none` - Clean Documentation
+
 ```bash
 python -m src.docgenai.cli generate src/ -o docs --metadata-mode none
 ```
+
 Generates clean documentation without any metadata footer.
 
 ### `footer` - Inline Metadata (Default)
+
 ```bash
 python -m src.docgenai.cli generate src/ -o docs --metadata-mode footer
 ```
+
 Includes metadata as a footer section in the documentation file.
 
 ### `file` - Separate Metadata File
+
 ```bash
 python -m src.docgenai.cli generate src/ -o docs --metadata-mode file
 ```
+
 Saves metadata as a separate `.metadata.md` file alongside the documentation.
 
 **Metadata includes**:
