@@ -7,6 +7,116 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.0] - 2025-07-07
+
+### Added
+
+- **Comprehensive Architecture Documentation System**: Advanced architecture analysis with visual diagrams
+  - Added `COMPREHENSIVE_ARCHITECTURE_PROMPT` with detailed 10+ section structure
+  - Integrated Mermaid diagram generation for system architecture and data flow analysis
+  - Enhanced documentation includes Component Details, Performance Characteristics, Error Handling Strategy
+  - Added Security Architecture, Deployment Architecture, and Future Considerations sections
+  - Comprehensive enterprise-grade documentation generation (10K+ characters)
+  - New `get_comprehensive_architecture_prompt()` convenience function
+  - Successfully tested with complex codebases generating detailed technical documentation
+- **Enhanced Mermaid Diagram Processing**: Robust post-processing system for diagram quality
+  - Intelligent empty line handling in Mermaid code blocks
+  - Enhanced debugging capabilities for Mermaid formatting issues
+  - Improved diagram formatting consistency and reliability
+  - Better handling of complex diagram structures with multiple components
+  - Automatic cleanup of diagram formatting artifacts
+- **Modular Architecture Prompt System**: Refactored for better maintainability
+  - Created `ArchitecturePromptBuilder` class for consistent prompt generation
+  - Maintained backward compatibility with existing string template approach
+  - Centralized formatting rules across all architecture prompt types
+  - Enhanced prompt clarity and AI model compliance for better output quality
+
+### Changed
+
+- **Default Architecture Type**: Set comprehensive architecture as default for richer documentation
+  - Updated default configuration to use "comprehensive" architecture type
+  - Enhanced output quality with detailed architectural insights
+  - Improved visual documentation with automatic Mermaid diagram generation
+  - Better structured documentation following enterprise documentation standards
+- **README Documentation**: Comprehensive updates to reflect current project state
+  - Updated project description and feature overview
+  - Enhanced installation and usage instructions
+  - Added detailed examples of comprehensive architecture documentation
+  - Improved troubleshooting and development guidance
+  - Better structured documentation for both users and contributors
+- **Synthesis Prompt Engineering**: Enhanced multi-chunk synthesis quality
+  - Improved formatting instructions for Mermaid diagrams in synthesis
+  - Better handling of complex architectural patterns across multiple code chunks
+  - Enhanced consistency in synthesized documentation output
+  - Improved integration between individual chunk analysis and final synthesis
+
+### Fixed
+
+- **Mermaid Diagram Formatting Issues**: Comprehensive post-processing improvements
+  - Resolved empty line handling in Mermaid code blocks that caused rendering issues
+  - Fixed diagram formatting artifacts that interfered with proper rendering
+  - Improved consistency of Mermaid diagram structure and syntax
+  - Enhanced debugging capabilities for Mermaid-related formatting problems
+  - Better error handling for malformed diagram code
+- **Architecture Documentation Quality**: Enhanced output consistency and formatting
+  - Fixed formatting inconsistencies in generated architecture documentation
+  - Improved markdown compliance for complex documentation structures
+  - Better handling of nested code blocks and diagram integration
+  - Enhanced prompt engineering to reduce AI model formatting errors
+- **Code Organization**: Improved maintainability and extensibility
+  - Better separation of concerns in architecture prompt system
+  - Enhanced error handling and validation throughout the documentation pipeline
+  - Improved code quality and consistency across architecture-related modules
+
+### Technical Improvements
+
+- **Enhanced Prompt Engineering**: Significantly improved AI model output quality
+  - Better structured prompts with clear formatting guidelines
+  - Improved AI model compliance with markdown and Mermaid syntax
+  - Enhanced consistency in documentation structure and content quality
+  - Reduced post-processing requirements through better initial prompts
+- **Comprehensive Testing**: Validated across diverse codebases and scenarios
+  - Tested with complex multi-file projects generating detailed documentation
+  - Verified Mermaid diagram generation and formatting across different architectures
+  - Validated comprehensive architecture documentation with real-world codebases
+  - Confirmed backward compatibility with existing documentation workflows
+- **Performance Optimization**: Improved generation speed and resource usage
+  - Enhanced prompt processing efficiency for comprehensive documentation
+  - Better memory management during large codebase analysis
+  - Optimized Mermaid diagram generation and post-processing
+  - Improved caching effectiveness for complex documentation workflows
+
+### Documentation
+
+- **Architecture Documentation**: Enhanced project architecture documentation
+  - Updated architecture.md with current system design and capabilities
+  - Improved developer documentation with comprehensive architecture examples
+  - Enhanced API documentation for new architecture prompt features
+  - Better integration examples and usage patterns
+- **User Guide Updates**: Comprehensive documentation improvements
+  - Updated README with current feature set and capabilities
+  - Enhanced installation and setup instructions
+  - Added troubleshooting section for common architecture documentation issues
+  - Improved examples showcasing comprehensive architecture documentation capabilities
+
+### Performance
+
+- **Documentation Generation**: Improved speed and quality of comprehensive documentation
+  - Enhanced prompt engineering reduces need for multiple generation attempts
+  - Better AI model compliance results in higher quality first-pass output
+  - Reduced processing time through optimized post-processing pipeline
+  - Improved memory efficiency during large-scale documentation generation
+
+### Migration Notes
+
+- **Configuration Updates**: Default architecture type changed to "comprehensive"
+  - Existing users will automatically get enhanced documentation with visual diagrams
+  - Legacy "standard" architecture type remains available for backward compatibility
+  - No breaking changes to existing configuration files or CLI usage
+  - Enhanced documentation quality with minimal configuration changes required
+
+This release represents a significant enhancement to DocGenAI's architecture documentation capabilities, providing enterprise-grade documentation generation with comprehensive visual diagrams and detailed architectural analysis. The improvements focus on delivering higher quality, more maintainable documentation that serves both technical and business stakeholders effectively.
+
 ## [0.6.0] - 2025-07-03
 
 ### Added

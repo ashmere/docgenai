@@ -119,11 +119,13 @@ DocGenAI supports two architecture analysis types:
 - Suitable for most codebases
 
 #### Comprehensive Architecture (Default)
-- Detailed architectural analysis with Mermaid diagrams
-- System architecture diagrams
-- Data flow diagrams
-- Component interaction analysis
-- More detailed than standard analysis
+- **Enterprise-grade** architectural analysis with visual Mermaid diagrams
+- **System architecture diagrams** showing component relationships and interactions
+- **Data flow diagrams** illustrating processing pipelines and data transformations
+- **Component interaction analysis** with detailed interface documentation
+- **10+ comprehensive sections** including performance, security, and deployment architecture
+- **Future considerations** and architectural evolution recommendations
+- More detailed than standard analysis with actionable insights
 
 ## 🔧 Configuration
 
@@ -367,7 +369,7 @@ poetry run pre-commit run --all-files
 - ✅ **Solution**: This is expected for large codebases. DocGenAI analyzes each chunk individually then synthesizes results.
 
 **Mermaid diagrams have formatting issues**:
-- ✅ **Solution**: DocGenAI includes post-processing to clean up common formatting issues automatically.
+- ✅ **Solution**: DocGenAI v0.7.0 includes enhanced post-processing to automatically clean up Mermaid formatting issues, including empty line handling and diagram syntax validation.
 
 **Out of memory errors**:
 - ✅ **Solution**: Reduce `max_files` in config or process smaller directories individually.

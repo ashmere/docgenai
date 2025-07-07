@@ -4,8 +4,8 @@
 
 DocGenAI is an LLM-first documentation generation system that focuses on intelligent file selection and token-aware chunking to produce high-quality technical documentation.
 
-**Last Updated**: 2024-12-19
-**Version**: Current Architecture v3.0
+**Last Updated**: 2025-01-02
+**Version**: Current Architecture v0.7.0
 
 ## System Architecture
 
@@ -151,16 +151,24 @@ graph TD
 **Purpose**: Organize high-quality prompts for different documentation needs.
 
 **Organization**:
-- `prompts/architecture.py` - Architecture analysis prompts
-- `prompts/synthesis.py` - Multi-chunk synthesis prompts
+- `prompts/architecture.py` - Architecture analysis prompts with comprehensive documentation support
+- `prompts/synthesis.py` - Multi-chunk synthesis prompts with Mermaid diagram integration
 - `prompts/refinement.py` - Documentation refinement chains
-- `prompts/base.py` - Base prompt templates
+- `prompts/base.py` - Base prompt templates with enhanced formatting rules
+
+**Comprehensive Architecture Documentation (v0.7.0)**:
+- **Enterprise-grade** documentation with 10+ structured sections
+- **Visual Mermaid diagrams** for system architecture and data flow
+- **Component Details** with interface documentation and integration patterns
+- **Performance Characteristics** analysis and optimization recommendations
+- **Security Architecture** and deployment considerations
+- **Future Considerations** for architectural evolution
 
 **Chain Processing**:
-1. **Initial Analysis** - Architecture overview
-2. **Interface Enhancement** - API details
-3. **Data Flow Addition** - Process flows
-4. **Final Polish** - Consistency and readability
+1. **Initial Analysis** - Architecture overview with comprehensive analysis
+2. **Interface Enhancement** - API details with visual diagrams
+3. **Data Flow Addition** - Process flows with Mermaid diagrams
+4. **Final Polish** - Consistency, readability, and diagram formatting
 
 ### Model Abstraction
 
