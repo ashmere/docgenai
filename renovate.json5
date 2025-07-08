@@ -3,9 +3,9 @@
   "extends": [
     "config:recommended"
   ],
-  // "repositories": [
-  //   "ashmere/docgenai"
-  // ],
+  "repositories": [
+     "ashmere/docgenai"
+  ],
   "dependencyDashboardTitle": "Renovate Dashboard",
   "dependencyDashboardLabels": [
     "renovate",
