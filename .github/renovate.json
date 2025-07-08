@@ -1,0 +1,47 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:base"
+  ],
+  "timezone": "UTC",
+  "schedule": [
+    "before 10am every weekday"
+  ],
+  "labels": [
+    "dependencies"
+  ],
+  "assignees": [
+    "@ashmere"
+  ],
+  "reviewers": [
+    "@ashmere"
+  ],
+  "packageRules": [
+    {
+      "matchManagers": ["poetry"],
+      "groupName": "Python dependencies",
+      "schedule": [
+        "before 10am every weekday"
+      ]
+    },
+    {
+      "matchManagers": ["github-actions"],
+      "groupName": "GitHub Actions",
+      "schedule": [
+        "before 10am every weekday"
+      ]
+    }
+  ],
+  "python": {
+    "ignoreDeps": []
+  },
+  "prHourlyLimit": 2,
+  "prConcurrentLimit": 5,
+  "rebaseWhen": "conflicted",
+  "lockFileMaintenance": {
+    "enabled": true,
+    "schedule": [
+      "before 10am on monday"
+    ]
+  }
+}
