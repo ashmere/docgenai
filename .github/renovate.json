@@ -11,8 +11,9 @@
   "configMigration": true,
   "labels": ["renovate", "dependencies", "{{{updateType}}}", "renovate/datasource/{{{datasource}}}", "renovate/manager/{{{manager}}}"],
   "extends": [
-    "config:base"
+    "config:recommended"
   ],
+  "autodiscover": true,
   "timezone": "UTC",
   "schedule": [
     "before 10am every weekday"
