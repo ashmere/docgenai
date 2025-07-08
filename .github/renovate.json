@@ -1,28 +1,17 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "baseBranches": ["main", "master"],
-  "pruneStaleBranches":true,
-  "dependencyDashboard": true,
-  "reportType": "logging",
-  "dependencyDashboardTitle": "Renovate Dashboard",
-  "dependencyDashboardLabels": ["renovate", "dependencies"],
-  "dependencyDashboardOSVVulnerabilitySummary": "all",
-  "osvVulnerabilityAlerts": true,
-  "configMigration": true,
-  "labels": ["renovate", "dependencies", "{{{updateType}}}", "renovate/datasource/{{{datasource}}}", "renovate/manager/{{{manager}}}"],
   "extends": [
     "config:recommended"
   ],
-  "autodiscover": true,
+  "repositories": ["ashmere/docgenai"],
+  "baseBranches": ["main"],
   "timezone": "UTC",
   "schedule": [
     "before 10am every weekday"
   ],
+  "labels": ["dependencies"],
   "assignees": [
-    "@ashmere"
-  ],
-  "reviewers": [
-    "@ashmere"
+    "ashmere"
   ],
   "packageRules": [
     {
