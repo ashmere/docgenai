@@ -126,11 +126,11 @@
     {
       description: 'Update python version in github workflows',
       customType: 'regex',
-      managerFilePatterns: [
-        '/^.github/workflows/.+\\.yaml$/',
+      fileMatch: [
+        '^.github/workflows/.+\\.yaml$',
       ],
       matchStrings: [
-        '\\s+python-version: [\'"]?(?<currentValue>.+?)[\'"]?\\s',
+        '\\s+python-version: [\\\'"]?(?<currentValue>.+?)[\\\'"]?\\s',
       ],
       depNameTemplate: 'python/cpython',
       datasourceTemplate: 'github-releases',
@@ -138,8 +138,8 @@
     {
       description: 'Update python version in .python-version files',
       customType: 'regex',
-      managerFilePatterns: [
-        '/^\\.python-version$/',
+      fileMatch: [
+        '^\\.python-version$',
       ],
       matchStrings: [
         '^(?<currentValue>.+?)\\s*$',
@@ -148,37 +148,27 @@
       datasourceTemplate: 'github-releases',
     },
     {
-      description: 'Update python version in pyproject.toml requires-python',
+      description: 'Update python versions in pyproject.toml (requires-python and Poetry dependencies)',
       customType: 'regex',
-      managerFilePatterns: [
-        '/pyproject\\.toml$/',
+      fileMatch: [
+        'pyproject\\.toml$',
       ],
       matchStrings: [
-        'requires-python\\s*=\\s*[\'"]>=?(?<currentValue>[^\'"]+)[\'"]',
+        'requires-python\\\\s*=\\\\s*[\\\'"]>=?(?<currentValue>[^\\\'\"]+)[\\\'"]',
+        'python\\\\s*=\\\\s*[\\\'"]~?(?<currentValue>[0-9.]+)[\\\'"]',
       ],
       depNameTemplate: 'python/cpython',
       datasourceTemplate: 'github-releases',
     },
     {
-      description: 'Update python docker images in Dockerfiles',
+      description: 'Update python docker images in Dockerfiles (regular and alpine)',
       customType: 'regex',
-      managerFilePatterns: [
-        '/Dockerfile/',
+      fileMatch: [
+        'Dockerfile',
       ],
       matchStrings: [
-        '(\\s|/)python:(?<currentValue>\\d+\\.\\d+(?:\\.\\d+)?)-',
-      ],
-      depNameTemplate: 'python',
-      datasourceTemplate: 'docker',
-    },
-    {
-      description: 'Update python alpine docker images in Dockerfiles',
-      customType: 'regex',
-      managerFilePatterns: [
-        '/Dockerfile/',
-      ],
-      matchStrings: [
-        '(\\s|/)python:(?<currentValue>\\d+\\.\\d+(?:\\.\\d+)?)-alpine',
+        '(\\\\s|/)python:(?<currentValue>\\\\d+\\\\.\\\\d+(?:\\\\.\\\\d+)?)-',
+        '(\\\\s|/)python:(?<currentValue>\\\\d+\\\\.\\\\d+(?:\\\\.\\\\d+)?)-alpine',
       ],
       depNameTemplate: 'python',
       datasourceTemplate: 'docker',
