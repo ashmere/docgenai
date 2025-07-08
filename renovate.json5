@@ -32,12 +32,67 @@
   ],
   "packageRules": [
     {
-      "matchCategories": [
-        "python"
+      "description": "Override commitMessageExtra for python",
+      "matchPackageNames": [
+        "python/cpython",
+        "python",
+        "docker.io/python",
+        "docker.io/library/python",
+        "mcr.microsoft.com/devcontainers/python"
       ],
-      "ignoreDeps": []
+      "commitMessageExtra": "to {{#if isPinDigest}}{{{newDigestShort}}}{{else}}{{#if isMajor}}{{prettyNewMajor}}{{else}}{{#if isMinor}}v{{newMajor}}.{{newMinor}}{{else}}{{#if isSingleVersion}}{{prettyNewVersion}}{{else}}{{#if newValue}}{{{newValue}}}{{else}}{{{newDigestShort}}}{{/if}}{{/if}}{{/if}}{{/if}}{{/if}}"
     },
     {
+      "description": "Require approval for python major and minor versions",
+      "matchPackageNames": [
+        "python/cpython",
+        "python",
+        "docker.io/python",
+        "docker.io/library/python",
+        "mcr.microsoft.com/devcontainers/python"
+      ],
+      "matchUpdateTypes": ["major", "minor"],
+      "dependencyDashboardApproval": true
+    },
+    {
+      "description": "Group python packages",
+      "matchPackageNames": [
+        "python/cpython",
+        "python",
+        "docker.io/python",
+        "docker.io/library/python",
+        "mcr.microsoft.com/devcontainers/python"
+      ],
+      "groupName": "python runtime patches",
+      "separateMultipleMinor": true,
+      "separateMinorPatch": true
+    },
+    {
+      "description": "Python patch releases with scheduling to bypass rate limits",
+      "matchPackageNames": [
+        "python/cpython",
+        "python",
+        "docker.io/python",
+        "docker.io/library/python",
+        "mcr.microsoft.com/devcontainers/python"
+      ],
+      "matchUpdateTypes": ["patch"],
+      "prPriority": 10,
+      "schedule": "at any time",
+      "prCreation": "immediate",
+      "dependencyDashboardApproval": false,
+      "prHourlyLimit": 0,
+      "prConcurrentLimit": 0
+    },
+    {
+      "description": "Offer separate patch and minor versions for Python",
+      "matchPackageNames": ["python/cpython"],
+      "versioning": "pep440",
+      "separateMinorPatch": true,
+      "separateMajorMinor": true
+    },
+    {
+      "description": "Python dependencies via Poetry",
       "matchManagers": [
         "poetry"
       ],
@@ -47,6 +102,7 @@
       ]
     },
     {
+      "description": "GitHub Actions with automerge",
       "matchManagers": [
         "github-actions"
       ],
@@ -57,6 +113,52 @@
       "automerge": true,
       "automergeType": "pr",
       "platformAutomerge": true
+    }
+  ],
+  "customManagers": [
+    {
+      "description": "Update python version in github workflows",
+      "customType": "regex",
+      "fileMatch": ["^.github/workflows/.+\\.yaml$"],
+      "matchStrings": ["\\s+python-version: ['\"]?(?<currentValue>.+?)['\"]?\\s"],
+      "depNameTemplate": "python/cpython",
+      "datasourceTemplate": "github-releases"
+    },
+    {
+      "description": "Update python version in .python-version files",
+      "customType": "regex",
+      "fileMatch": ["^\\.python-version$"],
+      "matchStrings": ["^(?<currentValue>.+?)\\s*$"],
+      "depNameTemplate": "python/cpython",
+      "datasourceTemplate": "github-releases"
+    },
+    {
+      "description": "Update python version in pyproject.toml requires-python",
+      "customType": "regex",
+      "fileMatch": ["pyproject\\.toml$"],
+      "matchStrings": ["requires-python\\s*=\\s*['\"]>=?(?<currentValue>[^'\"]+)['\"]"],
+      "depNameTemplate": "python/cpython",
+      "datasourceTemplate": "github-releases"
+    },
+    {
+      "description": "Update python docker images in Dockerfiles",
+      "customType": "regex",
+      "fileMatch": ["Dockerfile"],
+      "matchStrings": [
+        "(\\s|/)python:(?<currentValue>\\d+\\.\\d+(?:\\.\\d+)?)-"
+      ],
+      "depNameTemplate": "python",
+      "datasourceTemplate": "docker"
+    },
+    {
+      "description": "Update python alpine docker images in Dockerfiles",
+      "customType": "regex",
+      "fileMatch": ["Dockerfile"],
+      "matchStrings": [
+        "(\\s|/)python:(?<currentValue>\\d+\\.\\d+(?:\\.\\d+)?)-alpine"
+      ],
+      "depNameTemplate": "python",
+      "datasourceTemplate": "docker"
     }
   ],
   "prHourlyLimit": 2,
