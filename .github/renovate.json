@@ -3,30 +3,53 @@
   "extends": [
     "config:recommended"
   ],
-  "repositories": ["ashmere/docgenai"],
+  "repositories": [
+    "ashmere/docgenai"
+  ],
   "dependencyDashboardTitle": "Renovate Dashboard",
-  "dependencyDashboardLabels": ["renovate", "dependencies"],
+  "dependencyDashboardLabels": [
+    "renovate",
+    "dependencies"
+  ],
   "dependencyDashboardOSVVulnerabilitySummary": "all",
   "osvVulnerabilityAlerts": true,
-  "baseBranches": ["main"],
+  "baseBranches": [
+    "main"
+  ],
   "timezone": "UTC",
   "schedule": [
     "before 10am every weekday"
   ],
-  "labels": ["renovate", "dependencies", "{{{updateType}}}", "renovate/datasource/{{{datasource}}}", "renovate/manager/{{{manager}}}"],
+  "labels": [
+    "renovate",
+    "dependencies",
+    "{{{updateType}}}",
+    "renovate/datasource/{{{datasource}}}",
+    "renovate/manager/{{{manager}}}"
+  ],
   "assignees": [
     "ashmere"
   ],
   "packageRules": [
     {
-      "matchManagers": ["poetry"],
+      "matchCategories": [
+        "python"
+      ],
+      "ignoreDeps": []
+    },
+    {
+      "matchManagers": [
+        "poetry"
+      ],
       "groupName": "Python dependencies",
       "schedule": [
         "before 10am every weekday"
       ]
     },
     {
-      "matchManagers": ["github-actions"],
+      "matchManagers": [
+        "github-actions"
+      ],
       "groupName": "GitHub Actions",
       "schedule": [
         "before 10am every weekday"
@@ -36,9 +59,6 @@
       "platformAutomerge": true
     }
   ],
-  "python": {
-    "ignoreDeps": []
-  },
   "prHourlyLimit": 2,
   "prConcurrentLimit": 5,
   "rebaseWhen": "conflicted",
