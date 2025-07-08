@@ -63,6 +63,7 @@ The Renovate workflow runs:
 ### Renovate Configuration
 - **File**: `.github/renovate.json`
 - **Features**:
+  - Targets only `ashmere/docgenai` repository
   - Groups Python dependencies (Poetry)
   - Groups GitHub Actions updates
   - Limits concurrent PRs (5 max)
