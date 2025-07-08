@@ -126,8 +126,8 @@
     {
       description: 'Update python version in github workflows',
       customType: 'regex',
-      fileMatch: [
-        '^.github/workflows/.+\\.yaml$',
+      managerFilePatterns: [
+        '/^.github/workflows/.+\\.yaml$/',
       ],
       matchStrings: [
         '\\s+python-version: [\\\'"]?(?<currentValue>.+?)[\\\'"]?\\s',
@@ -138,8 +138,8 @@
     {
       description: 'Update python version in .python-version files',
       customType: 'regex',
-      fileMatch: [
-        '^\\.python-version$',
+      managerFilePatterns: [
+        '/^\\.python-version$/',
       ],
       matchStrings: [
         '^(?<currentValue>.+?)\\s*$',
@@ -150,11 +150,11 @@
     {
       description: 'Update python versions in pyproject.toml (requires-python and Poetry dependencies)',
       customType: 'regex',
-      fileMatch: [
-        'pyproject\\.toml$',
+      managerFilePatterns: [
+        '/pyproject\\.toml$/',
       ],
       matchStrings: [
-        'requires-python\\\\s*=\\\\s*[\\\'"]>=?(?<currentValue>[^\\\'\"]+)[\\\'"]',
+        'requires-python\\\\s*=\\\\s*[\\\'"]>=?(?<currentValue>[^\\\'"]+)[\\\'"]',
         'python\\\\s*=\\\\s*[\\\'"]~?(?<currentValue>[0-9.]+)[\\\'"]',
       ],
       depNameTemplate: 'python/cpython',
@@ -163,8 +163,8 @@
     {
       description: 'Update python docker images in Dockerfiles (regular and alpine)',
       customType: 'regex',
-      fileMatch: [
-        'Dockerfile',
+      managerFilePatterns: [
+        '/Dockerfile/',
       ],
       matchStrings: [
         '(\\\\s|/)python:(?<currentValue>\\\\d+\\\\.\\\\d+(?:\\\\.\\\\d+)?)-',
