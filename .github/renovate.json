@@ -4,12 +4,16 @@
     "config:recommended"
   ],
   "repositories": ["ashmere/docgenai"],
+  "dependencyDashboardTitle": "Renovate Dashboard",
+  "dependencyDashboardLabels": ["renovate", "dependencies"],
+  "dependencyDashboardOSVVulnerabilitySummary": "all",
+  "osvVulnerabilityAlerts": true,
   "baseBranches": ["main"],
   "timezone": "UTC",
   "schedule": [
     "before 10am every weekday"
   ],
-  "labels": ["dependencies"],
+  "labels": ["renovate", "dependencies", "{{{updateType}}}", "renovate/datasource/{{{datasource}}}", "renovate/manager/{{{manager}}}"],
   "assignees": [
     "ashmere"
   ],
@@ -26,7 +30,10 @@
       "groupName": "GitHub Actions",
       "schedule": [
         "before 10am every weekday"
-      ]
+      ],
+      "automerge": true,
+      "automergeType": "pr",
+      "platformAutomerge": true
     }
   ],
   "python": {
