@@ -12,6 +12,9 @@
     'dependencies',
   ],
   dependencyDashboardOSVVulnerabilitySummary: 'all',
+  major: {
+    dependencyDashboardApproval: true
+  },
   osvVulnerabilityAlerts: true,
   baseBranches: [
     'main',
