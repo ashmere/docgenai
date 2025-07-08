@@ -82,6 +82,11 @@ def cli(ctx, config, verbose):
     help="Output directory for generated docs",
 )
 @click.option(
+    "--model",
+    "-m",
+    help="Model to use for generation (overrides config)",
+)
+@click.option(
     "--offline",
     is_flag=True,
     help="Force offline mode (use only cached models)",
@@ -106,6 +111,7 @@ def generate(
     ctx,
     target,
     output_dir,
+    model,
     offline,
     no_cache,
     cache_clear,
@@ -128,6 +134,14 @@ def generate(
         return
 
     # Update config with command-line options
+    if model:
+        import platform
+
+        if platform.system() == "Darwin":
+            config["model"]["mlx_model"] = model
+        else:
+            config["model"]["transformers_model"] = model
+
     if offline:
         config["model"]["offline_mode"] = True
         config["model"]["local_files_only"] = True
