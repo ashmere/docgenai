@@ -10,10 +10,10 @@
   ],
   dependencyDashboardOSVVulnerabilitySummary: 'all',
   major: {
-    dependencyDashboardApproval: true
+    dependencyDashboardApproval: true,
   },
   osvVulnerabilityAlerts: true,
-  baseBranches: [
+  baseBranchPatterns: [
     'main',
   ],
   timezone: 'UTC',
